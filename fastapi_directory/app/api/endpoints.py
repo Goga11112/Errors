@@ -1,0 +1,16 @@
+from fastapi import APIRouter
+from fastapi_directory.app.api.auth import router as auth_router
+from fastapi_directory.app.api.users import router as users_router
+from fastapi_directory.app.api.admins import router as admins_router
+from fastapi_directory.app.api.errors import router as errors_router
+from fastapi_directory.app.api.admin_log import router as admin_log_router
+from fastapi_directory.app.api.roles import router as roles_router
+
+router = APIRouter()
+
+router.include_router(auth_router, prefix="/auth", tags=["auth"])
+router.include_router(users_router, prefix="/users", tags=["users"])
+router.include_router(admins_router, prefix="/admins", tags=["admins"])
+router.include_router(errors_router, prefix="/errors", tags=["errors"])
+router.include_router(admin_log_router, prefix="/admin_logs", tags=["admin_logs"])
+router.include_router(roles_router, prefix="/roles", tags=["roles"])
