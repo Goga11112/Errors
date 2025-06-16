@@ -1,25 +1,90 @@
-# Создание приложения FastAPI
-import sys
 import os
-
-print("sys.path:", sys.path)
-print("Current working directory:", os.getcwd())
-
-# Добавляем корневую папку проекта в sys.path для корректного импорта
+import sys
+from dotenv import load_dotenv
+# Добавьте эту строку, чтобы добавить корневую папку проекта в sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
+load_dotenv()  # Загружаем переменные окружения из .env
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.openapi.utils import get_openapi
+import logging
+
+import os
 from fastapi import FastAPI
-from fastapi_directory.app.core.cors import setup_cors
-from fastapi_directory.app.db.database import engine, Base
-from fastapi_directory.app.api.endpoints import router as api_router
+from fastapi.staticfiles import StaticFiles
+
+app = FastAPI()
+
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'uploaded_images')))
+ABS_UPLOAD_DIR = os.path.abspath(UPLOAD_DIR)
+
+# Mount StaticFiles at root level for uploaded_images
+app.mount("/uploaded_images", StaticFiles(directory=ABS_UPLOAD_DIR), name="uploaded_images")
+
+# Global exception handler for validation errors
+from fastapi.responses import JSONResponse
+from fastapi.requests import Request
+from fastapi.exceptions import RequestValidationError
+import logging
+import json
+
+# Removed middleware that deletes local_kw from query parameters
+# @app.middleware("http")
+# async def remove_local_kw(request: Request, call_next):
+#     logging.info(f"Incoming query params before removal: {request.query_params}")
+#     if "local_kw" in request.query_params:
+#         # Создаем новые query параметры без local_kw
+#         new_query_params = [
+#             (k, v) for k, v in request.query_params.multi_items()
+#             if k != "local_kw"
+#         ]
+#         request.scope["query_string"] = "&".join(
+#             f"{k}={v}" for k, v in new_query_params
+#         ).encode()
+#     logging.info(f"Query params after removal: {request.query_params}")
+#     return await call_next(request)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logging.error(f"Validation error for request {request.url}: {exc.errors()}")
+    try:
+        body_bytes = await request.body()
+        # Convert bytes to string safely
+        body_text = body_bytes.decode('utf-8', errors='replace')
+    except Exception as e:
+        body_text = f"Failed to read body: {e}"
+    safe_body = None
+    try:
+        safe_body = exc.body
+        # Ensure safe_body is JSON serializable
+        json.dumps(safe_body)
+    except Exception:
+        safe_body = None
+    logging.error(f"Request body: {body_text}")
+    # Convert any bytes in exc.errors() to string to avoid JSON serialization error
+    def convert_bytes(obj):
+        if isinstance(obj, bytes):
+            return obj.decode('utf-8', errors='replace')
+        if isinstance(obj, list):
+            return [convert_bytes(i) for i in obj]
+        if isinstance(obj, dict):
+            return {k: convert_bytes(v) for k, v in obj.items()}
+        return obj
+    safe_errors = convert_bytes(exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content={"detail": safe_errors, "body": safe_body, "raw_body": body_text},
+    )
+
+from app.core.cors import setup_cors
+from app.db.database import engine, Base
+from app.api.endpoints import router as api_router
 
 # Создание таблиц в базе данных
 Base.metadata.create_all(bind=engine)
-
-# Создание приложения FastAPI
-from fastapi.openapi.utils import get_openapi
-
-app = FastAPI()
 
 # Настройка CORS
 setup_cors(app)
@@ -27,20 +92,27 @@ setup_cors(app)
 # Подключение маршрутов API с префиксом "/api"
 app.include_router(api_router, prefix="/api")
 
+
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
+    
     openapi_schema = get_openapi(
         title="Custom API",
         version="1.0.0",
-        description="Custom OpenAPI schema without local_kw parameter",
+        description="Custom OpenAPI schema",
         routes=app.routes,
     )
-    # Remove 'local_kw' parameter from all paths if present
-    for path in openapi_schema.get("paths", {}).values():
+    
+    # Удаляем local_kw из всех эндпоинтов
+    for path in openapi_schema["paths"].values():
         for method in path.values():
-            parameters = method.get("parameters", [])
-            method["parameters"] = [param for param in parameters if param.get("name") != "local_kw"]
+            if "parameters" in method:
+                method["parameters"] = [
+                    param for param in method["parameters"]
+                    if param.get("name") != "local_kw"
+                ]
+    
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
@@ -50,6 +122,11 @@ app.openapi = custom_openapi
 async def root():
     return {"message": "FastAPI server is running"}
 
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    response = await call_next(request)
+    return response
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

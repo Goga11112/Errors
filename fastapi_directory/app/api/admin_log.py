@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, Request, status, APIRouter
+from fastapi import Depends, HTTPException, Request, status, APIRouter, Query
 from sqlalchemy.orm import Session
 from app.models.admin_log import AdminLog
 from app.core.security import get_current_active_admin
@@ -46,7 +46,7 @@ def log_admin_action(
     db.commit()
     db.refresh(admin_log)
 
-@router.post("/admin_logs/", response_model=AdminLogResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=AdminLogResponse, status_code=status.HTTP_201_CREATED)
 def create_admin_log(log: AdminLogCreate, db: Session = Depends(get_db), current_user=Depends(get_current_active_admin)):
     db_log = AdminLog(
         admin_id=current_user.id,
@@ -57,7 +57,7 @@ def create_admin_log(log: AdminLogCreate, db: Session = Depends(get_db), current
     db.refresh(db_log)
     return db_log
 
-@router.get("/admin_logs/", response_model=list[AdminLogResponse])
+@router.get("/", response_model=list[AdminLogResponse])
 def read_admin_logs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user=Depends(get_current_active_admin)):
     logs = db.query(AdminLog).offset(skip).limit(limit).all()
     return logs

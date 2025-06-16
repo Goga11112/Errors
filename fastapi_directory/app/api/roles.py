@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.db.database import SessionLocal
+from app.db.database import SessionLocal, get_db
 from app.models.role import Role
 from app.models.user import User
 from app.schemas.user import UserResponse
@@ -8,12 +8,11 @@ from app.core.security import get_current_super_admin, get_password_hash
 
 router = APIRouter()
 
+
+from app.db.database import get_db as database_get_db
+
 def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    yield from database_get_db()
 
 # Предопределённые роли
 PREDEFINED_ROLES = [

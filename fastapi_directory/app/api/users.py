@@ -53,22 +53,24 @@ def read_users(request: Request, db: Session = Depends(get_db)):
     users = db.query(User).options(joinedload(User.role)).all()
     return users
 
-@router.put("/{user_id}", response_model=UserResponse)
-def update_user(user_id: int, user: UserCreate, db: Session = Depends(get_db), current_user=Depends(get_current_active_admin)):
+from fastapi import Body
+
+@router.put("/{user_id}/role", response_model=UserResponse)
+def update_user_role(
+    user_id: int,
+    role_id: int = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_active_admin),
+):
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
-    if user.role_id is not None and current_user.role.name != "Главный администратор":
+    if current_user.role.name != "Главный администратор":
         raise HTTPException(status_code=403, detail="Недостаточно прав для назначения роли")
-    db_user.username = user.username
-    db_user.realname = user.realname
-    if user.password:
-        db_user.password_hash = get_password_hash(user.password)
-    if user.role_id is not None:
-        db_user.role_id = user.role_id
+    db_user.role_id = role_id
     db.commit()
     db.refresh(db_user)
-    log_admin_action(db, current_user, f"Обновлен пользователь: {db_user.username}")
+    log_admin_action(db, current_user, f"Обновлена роль пользователя: {db_user.username}")
     return db_user
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

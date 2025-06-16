@@ -8,7 +8,9 @@ class Error(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, index=True)
     description = Column(Text, nullable=True)
+    solution_description = Column(Text, nullable=True)
     images = relationship("ErrorImage", back_populates="error")
+
 
 
 class ErrorImage(Base):

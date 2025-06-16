@@ -1,37 +1,84 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Typography,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  IconButton,
+  Box,
+  List,
+  ListItem,
+  ListItemText,
+} from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import axios from 'axios';
+
+const API_BASE_URL = `http://localhost:8000/api`;
 
 function AdminPanelErrors({ token }) {
   const [errors, setErrors] = useState([]);
-  const [error, setError] = useState('');
-  const [errorName, setErrorName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
   const [editingError, setEditingError] = useState(null);
+  const [errorName, setErrorName] = useState('');
   const [description, setDescription] = useState('');
+  const [solutionDescription, setSolutionDescription] = useState('');
   const [imageFiles, setImageFiles] = useState([]);
   const maxImages = 5;
+  const inputFileRef = useRef(null);
 
   useEffect(() => {
-    const fetchErrors = async () => {
-      try {
-        const response = await axios.get('/api/errors/', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setErrors(response.data);
-      } catch (err) {
-        // If error response contains validation errors, stringify them
-        if (err.response && err.response.data) {
-          if (typeof err.response.data === 'object') {
-            setError(JSON.stringify(err.response.data, null, 2));
-          } else {
-            setError(err.response.data);
-          }
-        } else {
-          setError('Ошибка при загрузке ошибок');
-        }
-      }
+    loadErrors();
+  }, []);
+
+  useEffect(() => {
+    if (modalOpen) {
+      window.addEventListener('paste', handlePaste);
+    } else {
+      window.removeEventListener('paste', handlePaste);
+    }
+    return () => {
+      window.removeEventListener('paste', handlePaste);
     };
-    fetchErrors();
-  }, [token]);
+  }, [modalOpen, imageFiles]);
+
+  const loadErrors = async () => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const response = await axios.get(`${API_BASE_URL}/errors/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setErrors(response.data);
+    } catch (err) {
+      setErrorMsg(`Ошибка при загрузке ошибок: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenModal = () => {
+    setEditingError(null);
+    setErrorName('');
+    setDescription('');
+    setSolutionDescription('');
+    setImageFiles([]);
+    setErrorMsg('');
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+  };
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -46,50 +93,105 @@ function AdminPanelErrors({ token }) {
     setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const uploadImages = async (errorId) => {
+  const handlePaste = (event) => {
+    if (!modalOpen) return;
+    const items = event.clipboardData.items;
+    const filesFromPaste = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file && (file.type === 'image/png' || file.type === 'image/jpeg' || file.type === 'image/jpg')) {
+          filesFromPaste.push(file);
+        }
+      }
+    }
+    if (filesFromPaste.length > 0) {
+      if (filesFromPaste.length + imageFiles.length > maxImages) {
+        alert(`Можно загрузить не более ${maxImages} изображений`);
+        return;
+      }
+      setImageFiles(prev => [...prev, ...filesFromPaste]);
+    }
+  };
+
+  const uploadNewImages = async (errorId) => {
     for (const file of imageFiles) {
       const formData = new FormData();
       formData.append('file', file);
-      await axios.post(`/api/errors/${errorId}/images/`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      try {
+        await axios.post(`${API_BASE_URL}/errors/${errorId}/images/`, formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } catch (err) {
+        console.error('Ошибка при загрузке изображения:', err);
+        throw err;
+      }
     }
-    setImageFiles([]);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  const handleSubmit = async () => {
+    setErrorMsg('');
+    if (!errorName.trim()) {
+      setErrorMsg('Название ошибки обязательно');
+      return;
+    }
+    if (!editingError && imageFiles.length === 0) {
+      setErrorMsg('Необходимо загрузить хотя бы одно изображение');
+      return;
+    }
     try {
-      let response;
       if (editingError) {
-        response = await axios.put(`/api/errors/${editingError.id}`, { name: errorName, description }, {
+        // Update error details without images
+        const response = await axios.put(`${API_BASE_URL}/errors/${editingError.id}`, {
+          name: errorName,
+          description,
+          solution_description: solutionDescription,
+          images: editingError.images?.map(img => img.image_url) || [],
+        }, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        await uploadImages(editingError.id);
-        setErrors(errors.map(err => (err.id === editingError.id ? response.data : err)));
-        setEditingError(null);
-      } else {
-        response = await axios.post('/api/errors/', { name: errorName, description }, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        await uploadImages(response.data.id);
-        setErrors([...errors, response.data]);
-      }
-      setErrorName('');
-      setDescription('');
-    } catch (err) {
-      if (err.response && err.response.data) {
-        if (typeof err.response.data === 'object') {
-          setError(JSON.stringify(err.response.data, null, 2));
+        // Upload new images if any
+        if (imageFiles.length > 0) {
+          await uploadNewImages(editingError.id);
+          // Reload updated error with images
+          const updatedErrorResponse = await axios.get(`${API_BASE_URL}/errors/${editingError.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setErrors(errors.map(err => (err.id === editingError.id ? updatedErrorResponse.data : err)));
         } else {
-          setError(err.response.data);
+          setErrors(errors.map(err => (err.id === editingError.id ? response.data : err)));
         }
       } else {
-        setError(editingError ? 'Ошибка при обновлении ошибки' : 'Ошибка при создании ошибки');
+        // Create new error with images
+        const formData = new FormData();
+        formData.append('name', errorName);
+        formData.append('description', description);
+        formData.append('solution_description', solutionDescription);
+        imageFiles.forEach(file => {
+          formData.append('files', file);
+        });
+        const config = {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        };
+        const response = await axios.post(`${API_BASE_URL}/errors/`, formData, config);
+        setErrors([...errors, response.data]);
+      }
+      setImageFiles([]);
+      handleCloseModal();
+    } catch (err) {
+      if (err.response) {
+        const detail = typeof err.response.data.detail === 'string' ? err.response.data.detail : JSON.stringify(err.response.data.detail);
+        setErrorMsg(`Ошибка при сохранении ошибки: ${err.response.status} ${detail || err.response.statusText}`);
+      } else if (err.request) {
+        setErrorMsg('Ошибка: сервер не отвечает');
+      } else {
+        setErrorMsg(`Ошибка: ${err.message}`);
       }
     }
   };
@@ -98,109 +200,265 @@ function AdminPanelErrors({ token }) {
     setEditingError(err);
     setErrorName(err.name);
     setDescription(err.description || '');
+    setSolutionDescription(err.solution_description || '');
     setImageFiles([]);
-    setError('');
+    setErrorMsg('');
+    setModalOpen(true);
+  };
+
+  const handleDeleteImage = async (imageId) => {
+    if (!window.confirm('Вы уверены, что хотите удалить это изображение?')) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/errors/images/${imageId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (editingError) {
+        const newImages = editingError.images.filter(img => img.id !== imageId);
+        setEditingError({ ...editingError, images: newImages });
+      }
+    } catch (err) {
+      alert('Ошибка при удалении изображения');
+    }
   };
 
   const handleDelete = async (id) => {
-    setError('');
+    if (!window.confirm('Вы уверены, что хотите удалить ошибку?')) return;
+    setErrorMsg('');
     try {
-      await axios.delete(`/api/errors/${id}`, {
+      await axios.delete(`${API_BASE_URL}/errors/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setErrors(errors.filter(err => err.id !== id));
     } catch (err) {
-      if (err.response && err.response.data) {
-        if (typeof err.response.data === 'object') {
-          setError(JSON.stringify(err.response.data, null, 2));
-        } else {
-          setError(err.response.data);
-        }
+      if (err.response) {
+        setErrorMsg(`Ошибка при удалении ошибки: ${err.response.status} ${err.response.data.detail || err.response.statusText}`);
+      } else if (err.request) {
+        setErrorMsg('Ошибка: сервер не отвечает');
       } else {
-        setError('Ошибка при удалении ошибки');
+        setErrorMsg(`Ошибка: ${err.message}`);
       }
     }
   };
 
-  const handleCancel = () => {
-    setEditingError(null);
-    setErrorName('');
-    setDescription('');
-    setImageFiles([]);
-    setError('');
-  };
-
   return (
-    <div>
-      <h3>Управление ошибками</h3>
-      {error && <pre style={{color: 'red', whiteSpace: 'pre-wrap'}}>{error}</pre>}
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Название ошибки"
-          value={errorName}
-          onChange={(e) => setErrorName(e.target.value)}
-          required
-        />
-        <textarea
-          placeholder="Описание ошибки"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={4}
-          style={{ width: '100%', marginTop: 8 }}
-        />
-        <input
-          type="file"
-          multiple
-          accept=".png,.jpg,.jpeg"
-          onChange={handleFileChange}
-          style={{ marginTop: 8 }}
-        />
-        {imageFiles.length > 0 && (
-          <ul>
-            {imageFiles.map((file, index) => (
-              <li key={index}>
-                {file.name}
-                <button type="button" onClick={() => removeImageFile(index)} style={{ marginLeft: 8 }}>
-                  Удалить
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <button type="submit" style={{ marginTop: 8 }}>
-          {editingError ? 'Обновить ошибку' : 'Создать ошибку'}
-        </button>
-        {editingError && (
-          <button type="button" onClick={handleCancel} style={{ marginLeft: 8, marginTop: 8 }}>
-            Отмена
-          </button>
-        )}
-      </form>
-      <h4>Список ошибок</h4>
-      <ul>
-        {errors.map((err) => (
-          <li key={err.id} style={{ marginBottom: 8 }}>
-            <strong>{err.name}</strong>: {err.description}
-            {err.images && err.images.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-                {err.images.map((img) => (
-                  <img
-                    key={img.id}
-                    src={img.image_url}
-                    alt={`Error illustration ${img.id}`}
-                    style={{ maxWidth: '30%', maxHeight: 200, objectFit: 'contain' }}
-                  />
-                ))}
-              </div>
-            )}
-            <button onClick={() => handleEdit(err)} style={{ marginLeft: 8 }}>Редактировать</button>
-            <button onClick={() => handleDelete(err.id)} style={{ marginLeft: 8, color: 'red' }}>Удалить</button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+    <Box sx={{ width: '100%', maxWidth: 800, margin: 'auto', mt: 4 }}>
+      <Typography variant="h4" gutterBottom sx={{ color: '#f2a365' }}>Управление ошибками</Typography>
+      <Button
+        variant="contained"
+        onClick={handleOpenModal}
+        sx={{
+          mb: 2,
+          backgroundColor: '#f2a365',
+          color: '#2a2f4a',
+          '&:hover': { backgroundColor: '#d18c4a' },
+          fontWeight: '700',
+        }}
+      >
+        Добавить ошибку
+      </Button>
+      {errorMsg && (
+        <Typography
+          sx={{
+            mb: 2,
+            whiteSpace: 'pre-wrap',
+            color: '#ff6b6b',
+            fontWeight: '700',
+          }}
+        >
+          {errorMsg}
+        </Typography>
+      )}
+      {loading ? (
+        <Typography sx={{ color: '#eaeaea' }}>Загрузка...</Typography>
+      ) : (
+        <div>
+          {errors.length === 0 ? (
+            <Typography sx={{ color: '#eaeaea' }}>Список ошибок пуст</Typography>
+          ) : (
+            errors.map((err) => (
+              <Accordion
+                key={err.id}
+                sx={{
+                  backgroundColor: '#2a2f4a',
+                  color: '#eaeaea',
+                  border: '1px solid #f2a365',
+                  mb: 1,
+                  '&:before': { display: 'none' },
+                }}
+              >
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon sx={{ color: '#f2a365' }} />}
+                  sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <Typography sx={{ flexGrow: 1 }}>{err.name}</Typography>
+                  <div onClick={(e) => e.stopPropagation()} onFocus={(e) => e.stopPropagation()}>
+                    <IconButton aria-label="edit" onClick={() => handleEdit(err)} sx={{ color: '#f2a365' }}>
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton aria-label="delete" onClick={() => handleDelete(err.id)} sx={{ color: '#f2a365' }}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </div>
+                </AccordionSummary>
+                <AccordionDetails sx={{ backgroundColor: '#1b1f33', color: '#eaeaea' }}>
+                  <Typography sx={{ whiteSpace: 'pre-wrap' }}>{err.description}</Typography>
+                  {err.images && err.images.length > 0 && (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                      {err.images.map((img) => (
+                        <Box key={img.id} sx={{ position: 'relative', display: 'inline-block' }}>
+                          <img
+                            src={`${API_BASE_URL.replace('/api', '')}${img.image_url}`}
+                            alt={`Error illustration ${img.id}`}
+                            style={{ maxWidth: '30%', maxHeight: 200, objectFit: 'contain' }}
+                          />
+                          <IconButton
+                            size="small"
+                            aria-label="delete image"
+                            sx={{
+                              position: 'absolute',
+                              top: 0,
+                              right: 0,
+                              backgroundColor: 'rgba(255,255,255,0.7)',
+                              '&:hover': { backgroundColor: 'rgba(255,0,0,0.8)', color: 'white' },
+                            }}
+                            onClick={() => handleDeleteImage(img.id)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                  <Typography sx={{ fontStyle: 'italic', color: '#84a59d', mt: 2 }}>
+                    Решение: {err.solution_description || 'Нет описания решения'}
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+            ))
+          )}
+        </div>
+      )}
 
-export default AdminPanelErrors;
+          <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+            <DialogTitle sx={{ color: '#f2a365' }}>{editingError ? 'Редактировать ошибку' : 'Добавить ошибку'}</DialogTitle>
+            <DialogContent sx={{ backgroundColor: '#2a2f4a' }}>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Название ошибки *обязательное поле"
+                fullWidth
+                value={errorName}
+                onChange={(e) => setErrorName(e.target.value)}
+                required
+                sx={{
+                  '& label': { color: '#f2a365' },
+                  '& label.Mui-focused': { color: '#f2a365' },
+                  '& .MuiInputBase-root': {
+                    color: '#eaeaea',
+                    backgroundColor: '#1b1f33',
+                    borderRadius: 1,
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#84a59d',
+                  },
+                  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#f2a365',
+                  },
+                }}
+              />
+              <TextField
+                margin="dense"
+                label="Описание ошибки"
+                fullWidth
+                multiline
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                sx={{
+                  '& label': { color: '#f2a365' },
+                  '& label.Mui-focused': { color: '#f2a365' },
+                  '& .MuiInputBase-root': {
+                    color: '#eaeaea',
+                    backgroundColor: '#1b1f33',
+                    borderRadius: 1,
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#84a59d',
+                  },
+                  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#f2a365',
+                  },
+                }}
+              />
+              <TextField
+                margin="dense"
+                label="Описание решения"
+                fullWidth
+                multiline
+                rows={3}
+                value={solutionDescription}
+                onChange={(e) => setSolutionDescription(e.target.value)}
+                sx={{
+                  '& label': { color: '#f2a365' },
+                  '& label.Mui-focused': { color: '#f2a365' },
+                  '& .MuiInputBase-root': {
+                    color: '#eaeaea',
+                    backgroundColor: '#1b1f33',
+                    borderRadius: 1,
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#84a59d',
+                  },
+                  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#f2a365',
+                  },
+                }}
+              />
+              <input
+                type="file"
+                multiple
+                accept=".png,.jpg,.jpeg"
+                onChange={handleFileChange}
+                style={{ marginTop: 16 }}
+                ref={inputFileRef}
+              />
+              {imageFiles.length > 0 && (
+                <List>
+                  {imageFiles.map((file, index) => (
+                    <ListItem key={index} secondaryAction={
+                      <IconButton edge="end" aria-label="delete" onClick={() => removeImageFile(index)} sx={{ color: '#f2a365' }}>
+                        <DeleteIcon />
+                      </IconButton>
+                    }>
+                      <ListItemText primary={file.name} sx={{ color: '#eaeaea' }} />
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+              <Typography variant="body2" sx={{ mt: 1, color: '#84a59d' }}>
+                Вы можете вставлять скриншоты напрямую через Ctrl+V
+              </Typography>
+            </DialogContent>
+            <DialogActions sx={{ backgroundColor: '#2a2f4a' }}>
+              <Button onClick={handleCloseModal} sx={{ color: '#f2a365' }}>
+                Отмена
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                variant="contained"
+                sx={{
+                  backgroundColor: '#f2a365',
+                  color: '#2a2f4a',
+                  '&:hover': { backgroundColor: '#d18c4a' },
+                  fontWeight: '700',
+                }}
+              >
+                {editingError ? 'Обновить' : 'Создать'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </Box>
+      );
+    }
+    
+    export default AdminPanelErrors;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Typography, Button, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TablePagination } from '@mui/material';
+import { Typography, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TablePagination } from '@mui/material';
 
 function AdminPanelLogs({ token }) {
   const [logs, setLogs] = useState([]);
@@ -14,24 +14,34 @@ function AdminPanelLogs({ token }) {
     const fetchLogs = async () => {
       setLoading(true);
       try {
-        const response = await axios.get('/api/admin_logs/', {
+        console.log("Sending request with params:", {
+          skip: page * rowsPerPage,
+          limit: rowsPerPage
+        });
+        console.log("Authorization header:", `Bearer ${token}`);
+        const response = await axios.get('http://localhost:8000/api/admin_logs/', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
           params: {
-            page: page + 1,
-            size: rowsPerPage,
+            skip: page * rowsPerPage,
+            limit: rowsPerPage
           },
         });
-        setLogs(response.data.items);
-        setTotalCount(response.data.total_count);
+        setLogs(response.data);
+        setTotalCount(1000); // Set a large number or implement total count from backend if available
         setError('');
       } catch (err) {
-        setError('Ошибка при загрузке логов');
+        const errorMessage = err.response && err.response.data && err.response.data.detail
+          ? JSON.stringify(err.response.data.detail)
+          : err.message;
+        console.log("Error message:", errorMessage);
+        setError('Ошибка при загрузке логов: ' + errorMessage);
       } finally {
         setLoading(false);
       }
     };
+    console.log("Token in AdminPanelLogs:", token);
     fetchLogs();
   }, [token, page, rowsPerPage]);
 
@@ -46,28 +56,34 @@ function AdminPanelLogs({ token }) {
 
   return (
     <div>
-      <Typography variant="h4" gutterBottom>Логи администраторов</Typography>
+      <Typography variant="h4" gutterBottom sx={{ color: '#f2a365' }}>
+        Логи администраторов
+      </Typography>
       {loading ? (
-        <CircularProgress />
+        <CircularProgress sx={{ color: '#f2a365' }} />
       ) : error ? (
-        <Typography color="error">{error}</Typography>
+        <Typography sx={{ color: '#ff6b6b', fontWeight: '700' }}>{error}</Typography>
       ) : (
-        <TableContainer component={Paper}>
-          <Table aria-label="admin logs table">
+        <TableContainer component={Paper} sx={{ backgroundColor: '#2a2f4a', color: '#eaeaea' }}>
+          <Table aria-label="admin logs table" sx={{ color: '#eaeaea' }}>
             <TableHead>
               <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Пользователь</TableCell>
-                <TableCell>Действие</TableCell>
-                <TableCell>Дата</TableCell>
+                <TableCell sx={{ color: '#f2a365' }}>ID</TableCell>
+                <TableCell sx={{ color: '#f2a365' }}>Администратор</TableCell>
+                <TableCell sx={{ color: '#f2a365' }}>Действие</TableCell>
+                <TableCell sx={{ color: '#f2a365' }}>IP адрес</TableCell>
+                <TableCell sx={{ color: '#f2a365' }}>User Agent</TableCell>
+                <TableCell sx={{ color: '#f2a365' }}>Дата</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {logs.map((log) => (
-                <TableRow key={log.id}>
+                <TableRow key={log.id} sx={{ color: '#eaeaea' }}>
                   <TableCell>{log.id}</TableCell>
-                  <TableCell>{log.username}</TableCell>
+                  <TableCell>{log.admin_id}</TableCell>
                   <TableCell>{log.action}</TableCell>
+                  <TableCell>{log.ip_address || '-'}</TableCell>
+                  <TableCell>{log.user_agent || '-'}</TableCell>
                   <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
                 </TableRow>
               ))}
@@ -81,6 +97,22 @@ function AdminPanelLogs({ token }) {
             rowsPerPage={rowsPerPage}
             onRowsPerPageChange={handleChangeRowsPerPage}
             rowsPerPageOptions={[5, 10, 25]}
+            sx={{
+              color: '#eaeaea',
+              backgroundColor: '#2a2f4a',
+              '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
+                color: '#f2a365',
+              },
+              '.MuiTablePagination-select': {
+                color: '#f2a365',
+              },
+              '.MuiSvgIcon-root': {
+                color: '#f2a365',
+              },
+              '.MuiTablePagination-actions button': {
+                color: '#f2a365',
+              },
+            }}
           />
         </TableContainer>
       )}

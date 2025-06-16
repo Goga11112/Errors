@@ -12,6 +12,7 @@ class ErrorResponse(BaseModel):
     id: int
     name: str
     description: Optional[str] = None
+    solution_description: Optional[str] = None
     images: List[ErrorImageResponse] = []
 
     class Config:
@@ -20,4 +21,5 @@ class ErrorResponse(BaseModel):
 class ErrorCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    solution_description: Optional[str] = None
     images: Optional[List[str]] = None  # URLs or base64 strings for images

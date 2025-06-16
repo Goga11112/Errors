@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Typography, Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { Typography, Button, Dialog, DialogActions, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import AdminUserForm from './AdminUserForm';
 
 function AdminPanelUsers({ token, onLogout }) {
   const [users, setUsers] = useState([]);
@@ -13,6 +14,9 @@ function AdminPanelUsers({ token, onLogout }) {
   const [roleId, setRoleId] = useState(null);
   const [roles, setRoles] = useState([]);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -62,6 +66,9 @@ function AdminPanelUsers({ token, onLogout }) {
     setUsername(user.username);
     setRealname(user.realname);
     setRoleId(user.role.id);
+    setPassword('');
+    setConfirmPassword('');
+    setErrors({});
     setOpenDialog(true);
   };
 
@@ -83,25 +90,58 @@ function AdminPanelUsers({ token, onLogout }) {
     setUsername('');
     setRealname('');
     setRoleId(null);
+    setPassword('');
+    setConfirmPassword('');
+    setErrors({});
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!username.trim()) {
+      newErrors.username = 'Имя пользователя обязательно';
+    }
+    if (!realname.trim()) {
+      newErrors.realname = 'Настоящее имя обязательно';
+    }
+    if (isSuperAdmin && !roleId) {
+      newErrors.roleId = 'Роль обязательна';
+    }
+    if (password || confirmPassword) {
+      if (password.length < 6) {
+        newErrors.password = 'Пароль должен быть не менее 6 символов';
+      }
+      if (password !== confirmPassword) {
+        newErrors.confirmPassword = 'Пароли не совпадают';
+      }
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleDialogSave = async () => {
+    if (!validateForm()) {
+      return;
+    }
     try {
       if (editUser) {
-        await axios.put(`/api/users/${editUser.id}`, {
+        const updateData = {
           username,
           realname,
           role_id: roleId,
-        }, {
+        };
+        if (password) {
+          updateData.password = password;
+        }
+        await axios.put(`/api/users/${editUser.id}`, updateData, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setUsers(users.map((u) => (u.id === editUser.id ? { ...u, username, realname, role: { id: roleId } } : u)));
+        setUsers(users.map((u) => (u.id === editUser.id ? { ...u, username, realname, role: { id: Number(roleId) } } : u)));
       } else {
         await axios.post('/api/users/', {
           username,
           realname,
           role_id: roleId,
-          password: 'defaultpassword', // or prompt for password
+          password: password || 'defaultpassword', // or prompt for password
         }, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -119,33 +159,86 @@ function AdminPanelUsers({ token, onLogout }) {
 
   return (
     <div>
-      <Typography variant="h4" gutterBottom>Пользователи</Typography>
-      {error && <Typography color="error">{error}</Typography>}
-      <Button variant="contained" color="primary" onClick={() => setOpenDialog(true)} style={{ marginBottom: 10 }}>
+      <Typography variant="h4" gutterBottom sx={{ color: '#f2a365' }}>
+        Пользователи
+      </Typography>
+      {error && (
+        <Typography sx={{ color: '#ff6b6b', fontWeight: '700' }}>
+          {error}
+        </Typography>
+      )}
+      <Button
+        variant="contained"
+        onClick={() => {
+          setEditUser(null);
+          setUsername('');
+          setRealname('');
+          setRoleId(null);
+          setPassword('');
+          setConfirmPassword('');
+          setErrors({});
+          setOpenDialog(true);
+        }}
+        sx={{
+          mb: 2,
+          backgroundColor: '#f2a365',
+          color: '#2a2f4a',
+          '&:hover': { backgroundColor: '#d18c4a' },
+          fontWeight: '700',
+        }}
+      >
         Добавить пользователя
       </Button>
-      <TableContainer component={Paper}>
-        <Table aria-label="users table">
+      <TableContainer
+        component={Paper}
+        sx={{ backgroundColor: '#2a2f4a', color: '#eaeaea' }}
+      >
+        <Table aria-label="users table" sx={{ color: '#eaeaea' }}>
           <TableHead>
             <TableRow>
-              <TableCell>Имя пользователя</TableCell>
-              <TableCell>Настоящее имя</TableCell>
-              <TableCell>Роль</TableCell>
-              {isSuperAdmin && <TableCell>Действия</TableCell>}
+              <TableCell sx={{ color: '#f2a365' }}>Имя пользователя</TableCell>
+              <TableCell sx={{ color: '#f2a365' }}>Настоящее имя</TableCell>
+              <TableCell sx={{ color: '#f2a365' }}>Роль</TableCell>
+              {isSuperAdmin && (
+                <TableCell sx={{ color: '#f2a365' }}>Действия</TableCell>
+              )}
             </TableRow>
           </TableHead>
           <TableBody>
             {users.map((user) => (
-              <TableRow key={user.id}>
+              <TableRow key={user.id} sx={{ color: '#eaeaea' }}>
                 <TableCell>{user.username}</TableCell>
                 <TableCell>{user.realname}</TableCell>
                 <TableCell>{user.role.name}</TableCell>
                 {isSuperAdmin && (
                   <TableCell>
-                    <Button variant="outlined" color="primary" onClick={() => handleEditClick(user)} style={{ marginRight: 8 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleEditClick(user)}
+                      sx={{
+                        mr: 1,
+                        borderColor: '#f2a365',
+                        color: '#f2a365',
+                        '&:hover': {
+                          backgroundColor: '#f2a365',
+                          color: '#2a2f4a',
+                        },
+                      }}
+                    >
                       Редактировать
                     </Button>
-                    <Button variant="outlined" color="secondary" onClick={() => handleDeleteClick(user.id)}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleDeleteClick(user.id)}
+                      sx={{
+                        borderColor: '#f2a365',
+                        color: '#f2a365',
+                        '&:hover': {
+                          backgroundColor: '#f2a365',
+                          color: '#2a2f4a',
+                        },
+                      }}
+                    >
                       Удалить
                     </Button>
                   </TableCell>
@@ -157,46 +250,38 @@ function AdminPanelUsers({ token, onLogout }) {
       </TableContainer>
 
       <Dialog open={openDialog} onClose={handleDialogClose}>
-        <DialogTitle>{editUser ? 'Редактировать пользователя' : 'Добавить пользователя'}</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Имя пользователя"
-            fullWidth
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <TextField
-            margin="dense"
-            label="Настоящее имя"
-            fullWidth
-            value={realname}
-            onChange={(e) => setRealname(e.target.value)}
-          />
-          {isSuperAdmin && (
-            <TextField
-              select
-              label="Роль"
-              fullWidth
-              value={roleId}
-              onChange={(e) => setRoleId(e.target.value)}
-              SelectProps={{
-                native: true,
-              }}
-            >
-              <option value="">Выберите роль</option>
-              {roles.map((role) => (
-                <option key={role} value={role.id}>
-                  {role}
-                </option>
-              ))}
-            </TextField>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDialogClose}>Отмена</Button>
-          <Button onClick={handleDialogSave} color="primary">
+        <DialogTitle sx={{ color: '#f2a365' }}>
+          {editUser ? 'Редактировать пользователя' : 'Добавить пользователя'}
+        </DialogTitle>
+        <AdminUserForm
+          username={username}
+          setUsername={setUsername}
+          realname={realname}
+          setRealname={setRealname}
+          roleId={roleId}
+          setRoleId={setRoleId}
+          roles={roles}
+          isSuperAdmin={isSuperAdmin}
+          errors={errors}
+          setErrors={setErrors}
+          password={password}
+          setPassword={setPassword}
+          confirmPassword={confirmPassword}
+          setConfirmPassword={setConfirmPassword}
+        />
+        <DialogActions sx={{ backgroundColor: '#2a2f4a' }}>
+          <Button sx={{ color: '#f2a365' }} onClick={handleDialogClose}>
+            Отмена
+          </Button>
+          <Button
+            onClick={handleDialogSave}
+            sx={{
+              backgroundColor: '#f2a365',
+              color: '#2a2f4a',
+              '&:hover': { backgroundColor: '#d18c4a' },
+              fontWeight: '700',
+            }}
+          >
             Сохранить
           </Button>
         </DialogActions>
