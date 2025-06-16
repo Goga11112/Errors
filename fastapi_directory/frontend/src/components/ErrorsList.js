@@ -1,183 +1,83 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import axios from 'axios';
-import { Accordion, AccordionSummary, AccordionDetails, Typography, TextField, CircularProgress, Modal, Box, Button } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
-function ErrorsList({ token, onLogout }) {
+function ErrorsList() {
   const [errors, setErrors] = useState([]);
-  const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [selectedError, setSelectedError] = useState(null);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-
-  const pageSize = 10;
-  const observer = useRef();
-
-  const lastErrorElementRef = useCallback(
-    (node) => {
-      if (loading) return;
-      if (observer.current) observer.current.disconnect();
-      observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          setPage((prev) => prev + 1);
-        }
-      });
-      if (node) observer.current.observe(node);
-    },
-    [loading, hasMore]
-  );
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
-    const fetchErrors = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get('/api/errors/', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          params: {
-            page: page,
-            size: pageSize,
-          },
-        });
-        setErrors((prev) => [...prev, ...response.data.items]);
-        setHasMore(response.data.items.length > 0);
-        setError('');
-      } catch (err) {
-        if (err.response && err.response.status === 401) {
-          onLogout();
-        } else {
-          setError('Ошибка при загрузке ошибок');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchErrors();
-  }, [token, onLogout, page]);
+  }, []);
 
-  const filteredErrors = errors.filter((err) =>
-    err.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleOpenModal = (error) => {
-    setSelectedError(error);
+  const fetchErrors = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/api/errors/");
+      setErrors(response.data);
+    } catch (err) {
+      if (err.response) {
+        setError(`Ошибка загрузки: ${err.response.status} ${err.response.statusText}`);
+      } else if (err.request) {
+        setError("Ошибка: сервер не отвечает");
+      } else {
+        setError(`Ошибка: ${err.message}`);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCloseModal = () => {
-    setSelectedError(null);
+  const toggleExpand = (id) => {
+    setExpandedId(expandedId === id ? null : id);
   };
+
+  if (loading) {
+    return <div>Загрузка...</div>;
+  }
+
+  if (error) {
+    return <div style={{ color: "red" }}>Ошибка: {error}</div>;
+  }
+
+  if (errors.length === 0) {
+    return <div>Список ошибок пуст</div>;
+  }
 
   return (
     <div>
-      <Typography variant="h4" gutterBottom>Список ошибок</Typography>
-      <TextField
-        label="Поиск ошибок..."
-        variant="outlined"
-        fullWidth
-        margin="normal"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
-      {filteredErrors.length === 0 && !loading && <Typography>Ошибки не найдены</Typography>}
-      {filteredErrors.map((err, index) => {
-        if (filteredErrors.length === index + 1) {
-          return (
-            <Accordion key={err.id} ref={lastErrorElementRef}>
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                aria-controls={`panel-content-${err.id}`}
-                id={`panel-header-${err.id}`}
-              >
-                <Typography>{err.name}</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Typography>{err.description || 'Описание отсутствует'}</Typography>
+      <h2>Список ошибок</h2>
+      <div>
+        {errors.map((err) => (
+          <div key={err.id} style={{ border: "1px solid #ccc", marginBottom: 8, borderRadius: 4 }}>
+            <div
+              onClick={() => toggleExpand(err.id)}
+              style={{ cursor: "pointer", padding: 10, backgroundColor: "#f0f0f0" }}
+            >
+              {err.name}
+            </div>
+            {expandedId === err.id && (
+              <div style={{ padding: 10 }}>
+                <p>{err.description}</p>
                 {err.images && err.images.length > 0 && (
-                  <div style={{ marginTop: 10 }}>
-                    {err.images.map((img, idx) => (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {err.images.map((img) => (
                       <img
-                        key={idx}
-                        src={img.url}
-                        alt={`Error ${err.name} image ${idx + 1}`}
-                        style={{ maxWidth: '100%', marginBottom: 10 }}
-                        onClick={() => handleOpenModal(img)}
+                        key={img.id}
+                        src={img.image_url}
+                        alt={`Error illustration ${img.id}`}
+                        style={{ maxWidth: "30%", maxHeight: 200, objectFit: "contain" }}
                       />
                     ))}
                   </div>
                 )}
-              </AccordionDetails>
-            </Accordion>
-          );
-        } else {
-          return (
-            <Accordion key={err.id}>
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                aria-controls={`panel-content-${err.id}`}
-                id={`panel-header-${err.id}`}
-              >
-                <Typography>{err.name}</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Typography>{err.description || 'Описание отсутствует'}</Typography>
-                {err.images && err.images.length > 0 && (
-                  <div style={{ marginTop: 10 }}>
-                    {err.images.map((img, idx) => (
-                      <img
-                        key={idx}
-                        src={img.url}
-                        alt={`Error ${err.name} image ${idx + 1}`}
-                        style={{ maxWidth: '100%', marginBottom: 10 }}
-                        onClick={() => handleOpenModal(img)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </AccordionDetails>
-            </Accordion>
-          );
-        }
-      })}
-      {loading && <CircularProgress />}
-      <Button variant="contained" color="secondary" onClick={onLogout} style={{ marginTop: 20 }}>
-        Выйти
-      </Button>
 
-      <Modal
-        open={!!selectedError}
-        onClose={handleCloseModal}
-        aria-labelledby="modal-title"
-        aria-describedby="modal-description"
-      >
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            bgcolor: 'background.paper',
-            boxShadow: 24,
-            p: 4,
-            maxWidth: '90%',
-            maxHeight: '90%',
-            overflow: 'auto',
-          }}
-        >
-          {selectedError && (
-            <>
-              <img
-                src={selectedError.url}
-                alt="Error detail"
-                style={{ maxWidth: '100%', marginBottom: 10 }}
-              />
-              <Button variant="contained" onClick={handleCloseModal}>Закрыть</Button>
-            </>
-          )}
-        </Box>
-      </Modal>
+
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

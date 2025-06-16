@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from fastapi_directory.app.core.security import authenticate_user, create_access_token, get_current_user, get_password_hash
-from fastapi_directory.app.db.database import SessionLocal
-from fastapi_directory.app.schemas.token import Token, UserLogin
-from fastapi_directory.app.schemas.user import UserResponse
+from app.core.security import authenticate_user, create_access_token, get_current_user, get_password_hash
+from app.db.database import SessionLocal
+from app.schemas.token import Token, UserLogin
+from app.schemas.user import UserResponse
 
 router = APIRouter()
 
@@ -21,7 +21,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверное имя пользователя или пароль",
+            detail="Пользователь не найден или неверный пароль. Пожалуйста, проверьте правильность введенных данных.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(data={"sub": user.username})

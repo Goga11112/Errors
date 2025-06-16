@@ -1,4 +1,6 @@
 from pydantic import BaseModel
+from typing import Optional
+from app.schemas.role import RoleResponse
 
 class UserBase(BaseModel):
     username: str
@@ -12,6 +14,7 @@ class UserUpdate(UserBase):
 
 class UserResponse(UserBase):
     id: int
+    role: Optional[RoleResponse] = None
 
     class Config:
         orm_mode = True

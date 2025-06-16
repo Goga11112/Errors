@@ -1,42 +1,53 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './components/Login';
-import ErrorsList from './components/ErrorsList';
-import AdminPanel from './components/AdminPanel';
+import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import ErrorsList from "./components/ErrorsList";
+import AuthPage from "./components/AuthPage";
+import HeaderMenu from "./components/HeaderMenu";
+import AdminPanelErrors from "./components/AdminPanelErrors";
+// Assuming AdminPanelLogs and Users components exist or will be created
+import AdminPanelLogs from "./components/AdminPanelLogs";
+import Users from "./components/Users";
 
 function App() {
-  const [token, setToken] = React.useState('');
+  const [userRole, setUserRole] = useState(null);
+  const [showAuth, setShowAuth] = useState(false);
 
-  const handleLogin = (newToken) => {
-    setToken(newToken);
-    localStorage.setItem('token', newToken);
+  const handleLoginSuccess = (token) => {
+    // Здесь можно декодировать токен и получить роль пользователя
+    // Для примера просто установим роль "admin"
+    localStorage.setItem("access_token", token);
+    setUserRole("admin");
+    setShowAuth(false);
   };
 
   const handleLogout = () => {
-    setToken('');
-    localStorage.removeItem('token');
+    setUserRole(null);
+    localStorage.removeItem("access_token");
   };
-
-  React.useEffect(() => {
-    // Автоматический вход с дефолтным токеном для admin admin
-    const defaultToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTY4NjY3NjY2NiwiZXhwIjoxNjg2NjgwMjY2fQ.abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567abc890def12'; // Замените на реальный токен
-    setToken(defaultToken);
-  }, []);
 
   return (
     <Router>
-      <Routes>
-        <Route path="/login" element={<Login onLogin={handleLogin} />} />
-        <Route
-          path="/errors"
-          element={<ErrorsList token={token} onLogout={handleLogout} />}
+      <HeaderMenu userRole={userRole} onLoginClick={() => setShowAuth(true)} />
+      {showAuth ? (
+        <AuthPage
+          onLoginSuccess={handleLoginSuccess}
+          onContinueAsGuest={() => setShowAuth(false)}
         />
-        <Route
-          path="/admin"
-          element={token ? <AdminPanel token={token} onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
-        <Route path="*" element={<Navigate to="/errors" />} />
-      </Routes>
+      ) : (
+        <Routes>
+          <Route path="/" element={<ErrorsList />} />
+          <Route path="/admin/errors" element={<AdminPanelErrors />} />
+          <Route path="/admin/logs" element={<AdminPanelLogs />} />
+          <Route path="/users" element={<Users />} />
+          <Route path="/admin" element={<AdminPanelErrors />} />
+          {/* Добавьте другие маршруты по необходимости */}
+        </Routes>
+      )}
+      {userRole && (
+        <button onClick={handleLogout} style={{ position: "fixed", top: 10, right: 10 }}>
+          Выйти
+        </button>
+      )}
     </Router>
   );
 }

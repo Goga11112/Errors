@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from fastapi_directory.app.db.database import SessionLocal
-from fastapi_directory.app.models.user import User
-from fastapi_directory.app.schemas.user import UserCreate, UserResponse
-from fastapi_directory.app.core.security import get_current_active_user, get_password_hash, get_current_active_admin, get_current_super_admin
+from sqlalchemy.orm import Session, joinedload
+from app.db.database import SessionLocal
+from app.models.user import User
+from app.schemas.user import UserCreate, UserResponse
+from app.core.security import get_password_hash, get_current_active_admin, get_current_super_admin
+from app.api.admin_log import log_admin_action
+from app.models.role import Role
 
 router = APIRouter()
 
@@ -22,7 +24,6 @@ def create_user(user: UserCreate, db: Session = Depends(get_db), current_user=De
             raise HTTPException(status_code=403, detail="Недостаточно прав для назначения роли")
     else:
         # Если роль не указана, назначаем роль "Пользователь"
-        from fastapi_directory.app.models.role import Role
         role = db.query(Role).filter(Role.name == "Пользователь").first()
         user.role_id = role.id if role else None
 
@@ -41,10 +42,41 @@ def create_user(user: UserCreate, db: Session = Depends(get_db), current_user=De
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    log_admin_action(db, current_user, f"Создан пользователь: {db_user.username}")
     return db_user
 
+from fastapi import Request
 
+@router.get("/", response_model=list[UserResponse])
+def read_users(request: Request, db: Session = Depends(get_db)):
+    print(f"Request query params: {request.query_params}")
+    users = db.query(User).options(joinedload(User.role)).all()
+    return users
 
-@router.get("/users/me", response_model=UserResponse)
-def read_users_me(current_user=Depends(get_current_active_user)):
-    return current_user
+@router.put("/{user_id}", response_model=UserResponse)
+def update_user(user_id: int, user: UserCreate, db: Session = Depends(get_db), current_user=Depends(get_current_active_admin)):
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    if user.role_id is not None and current_user.role.name != "Главный администратор":
+        raise HTTPException(status_code=403, detail="Недостаточно прав для назначения роли")
+    db_user.username = user.username
+    db_user.realname = user.realname
+    if user.password:
+        db_user.password_hash = get_password_hash(user.password)
+    if user.role_id is not None:
+        db_user.role_id = user.role_id
+    db.commit()
+    db.refresh(db_user)
+    log_admin_action(db, current_user, f"Обновлен пользователь: {db_user.username}")
+    return db_user
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_active_admin)):
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    db.delete(db_user)
+    db.commit()
+    log_admin_action(db, current_user, f"Удален пользователь: {db_user.username}")
+    return None

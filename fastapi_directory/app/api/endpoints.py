@@ -1,10 +1,10 @@
 from fastapi import APIRouter
-from fastapi_directory.app.api.auth import router as auth_router
-from fastapi_directory.app.api.users import router as users_router
-from fastapi_directory.app.api.admins import router as admins_router
-from fastapi_directory.app.api.errors import router as errors_router
-from fastapi_directory.app.api.admin_log import router as admin_log_router
-from fastapi_directory.app.api.roles import router as roles_router
+from app.api.auth import router as auth_router
+from app.api.users import router as users_router
+from app.api.admins import router as admins_router
+from app.api.errors import router as errors_router
+from app.api.admin_log import router as admin_log_router
+from app.api.roles import router as roles_router
 
 router = APIRouter()
 
