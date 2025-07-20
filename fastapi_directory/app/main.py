@@ -10,8 +10,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
-import logging
-
 import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -28,28 +26,13 @@ app.mount("/uploaded_images", StaticFiles(directory=ABS_UPLOAD_DIR), name="uploa
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request
 from fastapi.exceptions import RequestValidationError
-import logging
 import json
 
-# Removed middleware that deletes local_kw from query parameters
-# @app.middleware("http")
-# async def remove_local_kw(request: Request, call_next):
-#     logging.info(f"Incoming query params before removal: {request.query_params}")
-#     if "local_kw" in request.query_params:
-#         # Создаем новые query параметры без local_kw
-#         new_query_params = [
-#             (k, v) for k, v in request.query_params.multi_items()
-#             if k != "local_kw"
-#         ]
-#         request.scope["query_string"] = "&".join(
-#             f"{k}={v}" for k, v in new_query_params
-#         ).encode()
-#     logging.info(f"Query params after removal: {request.query_params}")
-#     return await call_next(request)
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    logging.error(f"Validation error for request {request.url}: {exc.errors()}")
+#     logging.error(f"Validation error for request {request.url}: {exc.errors()}")
     try:
         body_bytes = await request.body()
         # Convert bytes to string safely
@@ -63,7 +46,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         json.dumps(safe_body)
     except Exception:
         safe_body = None
-    logging.error(f"Request body: {body_text}")
+#     logging.error(f"Request body: {body_text}")
     # Convert any bytes in exc.errors() to string to avoid JSON serialization error
     def convert_bytes(obj):
         if isinstance(obj, bytes):

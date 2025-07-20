@@ -5,9 +5,10 @@
             "server": "localhost",
             "port": 5432,
             "driver": "PostgreSQL",
-            "name": "localhost",
-            "username": "Goga11112",
-            "database": "db_errors"
+            "name": "Localhost",
+            "database": "db_errors",
+            "username": "Goga",
+            "password": "191202"
         }
     ]
 }

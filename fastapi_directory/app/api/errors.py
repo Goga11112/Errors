@@ -20,7 +20,20 @@ from app.models.user import User
 load_dotenv()
 
 import logging
-UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploaded_images")
+import os
+import pathlib
+import logging
+import sys
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+
+# Set upload directory to c:/Project/Errors/uploaded_images explicitly
+DEFAULT_UPLOAD_DIR = r"c:/Project/Errors/uploaded_images"
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", DEFAULT_UPLOAD_DIR)
 ABS_UPLOAD_DIR = os.path.abspath(UPLOAD_DIR)
 logging.info(f"Using absolute upload directory: {ABS_UPLOAD_DIR}")
 pathlib.Path(ABS_UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
@@ -81,11 +94,15 @@ async def create_error_with_files(
             file_path = os.path.join(ABS_UPLOAD_DIR, filename)
             logging.info(f"Saving file to {file_path}")
             try:
+                logging.info(f"Attempting to save file to {file_path}")
+                if not os.access(os.path.dirname(file_path), os.W_OK):
+                    logging.error(f"No write permission to directory: {os.path.dirname(file_path)}")
+                    raise PermissionError(f"No write permission to directory: {os.path.dirname(file_path)}")
                 with open(file_path, "wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
                 logging.info(f"File saved successfully: {file_path}")
             except Exception as e:
-                logging.error(f"Error saving file {file_path}: {e}")
+                logging.error(f"Error saving file {file_path}: {e}", exc_info=True)
                 raise
 
             # Создание записи об изображении
@@ -164,9 +181,18 @@ async def delete_error(
     # Удаляем связанные изображения и файлы
     images = db.query(ErrorImage).filter(ErrorImage.error_id == error_id).all()
     for img in images:
-        file_path = img.image_url.lstrip('/')
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        filename = os.path.basename(img.image_url)
+        file_path = os.path.join(ABS_UPLOAD_DIR, filename)
+        logging.info(f"Attempting to delete image file: {file_path}")
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logging.info(f"Deleted image file: {file_path}")
+            else:
+                logging.warning(f"Image file not found for deletion: {file_path}")
+        except Exception as e:
+            logging.error(f"Error deleting image file {file_path}: {e}", exc_info=True)
+            raise
     db.query(ErrorImage).filter(ErrorImage.error_id == error_id).delete()
     db.delete(db_error)
     db.commit()

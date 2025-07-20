@@ -16,6 +16,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+import logging
+
 class JWTBearer(HTTPBearer):
     def __init__(self):
         super().__init__(
@@ -27,10 +29,12 @@ class JWTBearer(HTTPBearer):
     async def __call__(self, request: Request) -> str:
         credentials: HTTPAuthorizationCredentials = await super().__call__(request)
         if not credentials.scheme == "Bearer":
+            logging.error(f"Invalid authentication scheme: {credentials.scheme}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid authentication scheme"
             )
+        logging.info(f"JWT token received: {credentials.credentials}")
         return credentials.credentials
 
 jwt_bearer = JWTBearer()
@@ -111,27 +115,27 @@ def get_current_active_admin(
     current_user: User = Depends(get_current_user)
 ) -> User:
     """Проверяет права администратора"""
-    import logging
-    logging.info(f"Checking admin rights for user: {current_user.username}, admin flag: {getattr(current_user, 'admin', None)}")
+#     import logging
+#     logging.info(f"Checking admin rights for user: {current_user.username}, admin flag: {getattr(current_user, 'admin', None)}")
     if not getattr(current_user, "admin", False):
-        logging.error(f"User admin: {getattr(current_user, 'admin', None)} - no admin rights")
+#         logging.error(f"User admin: {getattr(current_user, 'admin', None)} - no admin rights")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Недостаточно прав"
         )
-    logging.info(f"User authorized as admin with admin: {getattr(current_user, 'admin', None)}")
+#     logging.info(f"User authorized as admin with admin: {getattr(current_user, 'admin', None)}")
     return current_user
 
 def get_current_super_admin(
         request: Request,
         current_user: User = Depends(get_current_user)) -> User:
     """Проверяет права главного администратора"""
-    import logging
+#     import logging
     if not getattr(current_user, "sadmin", False):
-        logging.error(f"User sadmin: {getattr(current_user, 'sadmin', None)} - no super admin rights")
+#         logging.error(f"User sadmin: {getattr(current_user, 'sadmin', None)} - no super admin rights")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Недостаточно прав"
         )
-    logging.info(f"User authorized as super admin with sadmin: {getattr(current_user, 'sadmin', None)}")
+#     logging.info(f"User authorized as super admin with sadmin: {getattr(current_user, 'sadmin', None)}")
     return current_user

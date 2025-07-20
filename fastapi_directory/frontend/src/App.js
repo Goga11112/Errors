@@ -31,6 +31,8 @@ function App() {
     localStorage.removeItem("access_token");
   };
 
+  const token = localStorage.getItem("access_token");
+
   return (
     <Router>
       <HeaderMenu userRole={userRole} onLoginClick={() => setShowAuth(true)} />
@@ -42,12 +44,12 @@ function App() {
       ) : (
         <Routes>
           <Route path="/" element={<ErrorsList />} />
-          <Route path="/admin/errors" element={<AdminPanelErrors />} />
-          <Route path="/admin/logs" element={<AdminPanelLogs />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/admin" element={<AdminPanelErrors />} />
+          <Route path="/admin/errors" element={<AdminPanelErrors token={token} />} />
+          <Route path="/admin/logs" element={<AdminPanelLogs token={token} />} />
+          <Route path="/users" element={<Users token={token} />} />
+          <Route path="/admin" element={<AdminPanelErrors token={token} />} />
           {/* Добавьте другие маршруты по необходимости */}
-          <Route path="/admin/contactinfo" element={<AdminPanelContactInfo />} />
+          <Route path="/admin/contactinfo" element={<AdminPanelContactInfo token={token} />} />
         </Routes>
       )}
       {userRole && (
