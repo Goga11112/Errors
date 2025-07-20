@@ -24,6 +24,9 @@ class UserCreate(UserBase):
 
 class UserUpdate(UserBase):
     password: Optional[str] = None
+    role_id: Optional[int] = None
+    is_admin: Optional[bool] = None
+    is_super_admin: Optional[bool] = None
 
     @validator('password')
     def password_min_length(cls, v):

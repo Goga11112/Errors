@@ -14,6 +14,8 @@ import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+
+
 app = FastAPI()
 
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'uploaded_images')))
@@ -74,6 +76,8 @@ setup_cors(app)
 
 # Подключение маршрутов API с префиксом "/api"
 app.include_router(api_router, prefix="/api")
+# app.include_router(users_router, prefix="/api/users")
+# app.include_router(roles_router, prefix="/api/roles")
 
 
 def custom_openapi():

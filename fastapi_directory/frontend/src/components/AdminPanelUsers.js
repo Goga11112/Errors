@@ -1,75 +1,107 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Typography, Button, Dialog, DialogActions, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import AdminUserForm from './AdminUserForm';
+import {
+  Typography,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TextField,
+  Select,
+  MenuItem,
+  Checkbox,
+  FormControlLabel,
+} from '@mui/material';
 
 function AdminPanelUsers({ token, onLogout }) {
   const [users, setUsers] = useState([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [editUser, setEditUser] = useState(null);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [username, setUsername] = useState('');
-  const [realname, setRealname] = useState('');
-  const [roleId, setRoleId] = useState(null);
   const [roles, setRoles] = useState([]);
+  const [filterText, setFilterText] = useState('');
+  const [editRows, setEditRows] = useState({});
+  const [error, setError] = useState('');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get('/api/users/', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUsers(response.data);
-        setError('');
-      } catch (err) {
-        setError('Ошибка при загрузке пользователей');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchRoles = async () => {
-      try {
-        const response = await axios.get('/api/roles/', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setRoles(response.data);
-      } catch (err) {
-        // ignore roles fetch error
-      }
-    };
-
-    const checkSuperAdmin = async () => {
-      try {
-        const response = await axios.get('/api/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setIsSuperAdmin(response.data.role.name === 'Главный администратор');
-      } catch (err) {
-        // ignore
-      }
-    };
-
     fetchUsers();
     fetchRoles();
     checkSuperAdmin();
-  }, [token]);
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get('/api/users/', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers(response.data);
+      setError('');
+    } catch (err) {
+      setError('Ошибка при загрузке пользователей');
+    }
+  };
+
+  const fetchRoles = async () => {
+    try {
+      const response = await axios.get('/api/roles/', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRoles(response.data);
+    } catch (err) {
+      // ignore roles fetch error
+    }
+  };
+
+  const checkSuperAdmin = async () => {
+    try {
+      const response = await axios.get('/api/users/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setIsSuperAdmin(response.data.role.name === 'Главный администратор');
+    } catch (err) {
+      // ignore
+    }
+  };
+
+  const handleFilterChange = (e) => {
+    setFilterText(e.target.value);
+  };
+
+  const filteredUsers = users.filter((user) => {
+    const search = filterText.toLowerCase();
+    return (
+      user.username.toLowerCase().includes(search) ||
+      user.realname.toLowerCase().includes(search) ||
+      user.role.name.toLowerCase().includes(search) ||
+      (user.is_admin ? 'admin' : '').includes(search) ||
+      (user.is_super_admin ? 'super admin' : '').includes(search)
+    );
+  });
+
+  const handleEditChange = (id, field, value) => {
+    setEditRows((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: value,
+      },
+    }));
+  };
 
   const handleEditClick = (user) => {
-    setEditUser(user);
-    setUsername(user.username);
-    setRealname(user.realname);
-    setRoleId(user.role.id);
-    setPassword('');
-    setConfirmPassword('');
-    setErrors({});
-    setOpenDialog(true);
+    setEditRows((prev) => ({
+      ...prev,
+      [user.id]: {
+        username: user.username,
+        realname: user.realname,
+        role_id: user.role.id,
+        is_admin: user.is_admin,
+        is_super_admin: user.is_super_admin,
+      },
+    }));
+    setError('');
   };
 
   const handleDeleteClick = async (userId) => {
@@ -84,77 +116,61 @@ function AdminPanelUsers({ token, onLogout }) {
     }
   };
 
-  const handleDialogClose = () => {
-    setOpenDialog(false);
-    setEditUser(null);
-    setUsername('');
-    setRealname('');
-    setRoleId(null);
-    setPassword('');
-    setConfirmPassword('');
-    setErrors({});
-  };
+  const handleSave = async (id) => {
+    const edited = editRows[id];
+    if (!edited) return;
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!username.trim()) {
-      newErrors.username = 'Имя пользователя обязательно';
-    }
-    if (!realname.trim()) {
-      newErrors.realname = 'Настоящее имя обязательно';
-    }
-    if (isSuperAdmin && !roleId) {
-      newErrors.roleId = 'Роль обязательна';
-    }
-    if (password || confirmPassword) {
-      if (password.length < 6) {
-        newErrors.password = 'Пароль должен быть не менее 6 символов';
-      }
-      if (password !== confirmPassword) {
-        newErrors.confirmPassword = 'Пароли не совпадают';
-      }
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleDialogSave = async () => {
-    if (!validateForm()) {
+    if (!edited.username || !edited.realname || !edited.role_id) {
+      setError('Имя пользователя, настоящее имя и роль обязательны');
       return;
     }
+
     try {
-      if (editUser) {
-        const updateData = {
-          username,
-          realname,
-          role_id: roleId,
-        };
-        if (password) {
-          updateData.password = password;
+      await axios.put(
+        `/api/users/${id}`,
+        {
+          username: edited.username,
+          realname: edited.realname,
+          role_id: edited.role_id,
+          is_admin: edited.is_admin,
+          is_super_admin: edited.is_super_admin,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
-        await axios.put(`/api/users/${editUser.id}`, updateData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUsers(users.map((u) => (u.id === editUser.id ? { ...u, username, realname, role: { id: Number(roleId) } } : u)));
-      } else {
-        await axios.post('/api/users/', {
-          username,
-          realname,
-          role_id: roleId,
-          password: password || 'defaultpassword', // or prompt for password
-        }, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        // Refresh users list
-        const response = await axios.get('/api/users/', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUsers(response.data);
-      }
-      handleDialogClose();
+      );
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === id
+            ? {
+                ...user,
+                username: edited.username,
+                realname: edited.realname,
+                role: roles.find((r) => r.id === edited.role_id) || user.role,
+                is_admin: edited.is_admin,
+                is_super_admin: edited.is_super_admin,
+              }
+            : user
+        )
+      );
+      setEditRows((prev) => {
+        const newEditRows = { ...prev };
+        delete newEditRows[id];
+        return newEditRows;
+      });
+      setError('');
     } catch (err) {
       setError('Ошибка при сохранении пользователя');
     }
+  };
+
+  const handleCancel = (id) => {
+    setEditRows((prev) => {
+      const newEditRows = { ...prev };
+      delete newEditRows[id];
+      return newEditRows;
+    });
+    setError('');
   };
 
   return (
@@ -163,131 +179,240 @@ function AdminPanelUsers({ token, onLogout }) {
         Пользователи
       </Typography>
       {error && (
-        <Typography sx={{ color: '#ff6b6b', fontWeight: '700' }}>
+        <Typography sx={{ color: '#ff6b6b', fontWeight: '700', mb: 1 }}>
           {error}
         </Typography>
       )}
-      <Button
-        variant="contained"
-        onClick={() => {
-          setEditUser(null);
-          setUsername('');
-          setRealname('');
-          setRoleId(null);
-          setPassword('');
-          setConfirmPassword('');
-          setErrors({});
-          setOpenDialog(true);
+      <TextField
+        placeholder="Фильтр по имени, роли, статусу..."
+        value={filterText}
+        onChange={handleFilterChange}
+        fullWidth
+        sx={{ mb: 2 }}
+        InputProps={{
+          sx: {
+            backgroundColor: '#1b1f33',
+            color: '#eaeaea',
+            borderRadius: 1,
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#84a59d',
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#f2a365',
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#f2a365',
+            },
+          },
         }}
-        sx={{
-          mb: 2,
-          backgroundColor: '#f2a365',
-          color: '#2a2f4a',
-          '&:hover': { backgroundColor: '#d18c4a' },
-          fontWeight: '700',
-        }}
-      >
-        Добавить пользователя
-      </Button>
-      <TableContainer
-        component={Paper}
-        sx={{ backgroundColor: '#2a2f4a', color: '#eaeaea' }}
-      >
+      />
+      <TableContainer component={Paper} sx={{ backgroundColor: '#2a2f4a' }}>
         <Table aria-label="users table" sx={{ color: '#eaeaea' }}>
           <TableHead>
             <TableRow>
               <TableCell sx={{ color: '#f2a365' }}>Имя пользователя</TableCell>
               <TableCell sx={{ color: '#f2a365' }}>Настоящее имя</TableCell>
               <TableCell sx={{ color: '#f2a365' }}>Роль</TableCell>
-              {isSuperAdmin && (
-                <TableCell sx={{ color: '#f2a365' }}>Действия</TableCell>
-              )}
+              <TableCell sx={{ color: '#f2a365' }}>Админ</TableCell>
+              <TableCell sx={{ color: '#f2a365' }}>Супер админ</TableCell>
+              <TableCell sx={{ color: '#f2a365' }}>Действия</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id} sx={{ color: '#eaeaea' }}>
-                <TableCell>{user.username}</TableCell>
-                <TableCell>{user.realname}</TableCell>
-                <TableCell>{user.role.name}</TableCell>
-                {isSuperAdmin && (
+            {filteredUsers.map((user) => {
+              const isEditing = !!editRows[user.id];
+              const editData = editRows[user.id] || {};
+              return (
+                <TableRow key={user.id} sx={{ color: '#eaeaea' }}>
                   <TableCell>
-                    <Button
-                      variant="outlined"
-                      onClick={() => handleEditClick(user)}
-                      sx={{
-                        mr: 1,
-                        borderColor: '#f2a365',
-                        color: '#f2a365',
-                        '&:hover': {
-                          backgroundColor: '#f2a365',
-                          color: '#2a2f4a',
-                        },
-                      }}
-                    >
-                      Редактировать
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={() => handleDeleteClick(user.id)}
-                      sx={{
-                        borderColor: '#f2a365',
-                        color: '#f2a365',
-                        '&:hover': {
-                          backgroundColor: '#f2a365',
-                          color: '#2a2f4a',
-                        },
-                      }}
-                    >
-                      Удалить
-                    </Button>
+                    {isEditing ? (
+                      <TextField
+                        value={editData.username ?? user.username}
+                        onChange={(e) =>
+                          handleEditChange(user.id, 'username', e.target.value)
+                        }
+                        size="small"
+                        sx={{
+                          input: { color: '#eaeaea' },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#84a59d',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#f2a365',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#f2a365',
+                          },
+                        }}
+                      />
+                    ) : (
+                      user.username
+                    )}
                   </TableCell>
-                )}
-              </TableRow>
-            ))}
+                  <TableCell>
+                    {isEditing ? (
+                      <TextField
+                        value={editData.realname ?? user.realname}
+                        onChange={(e) =>
+                          handleEditChange(user.id, 'realname', e.target.value)
+                        }
+                        size="small"
+                        sx={{
+                          input: { color: '#eaeaea' },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#84a59d',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#f2a365',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#f2a365',
+                          },
+                        }}
+                      />
+                    ) : (
+                      user.realname
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {isEditing ? (
+                      <Select
+                        value={editData.role_id ?? user.role.id}
+                        onChange={(e) =>
+                          handleEditChange(user.id, 'role_id', e.target.value)
+                        }
+                        size="small"
+                        sx={{
+                          color: '#eaeaea',
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#84a59d',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#f2a365',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#f2a365',
+                          },
+                        }}
+                      >
+                        {roles.map((role) => (
+                          <MenuItem key={role.id} value={role.id}>
+                            {role.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    ) : (
+                      user.role.name
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {isEditing ? (
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={editData.is_admin ?? user.is_admin}
+                            onChange={(e) =>
+                              handleEditChange(user.id, 'is_admin', e.target.checked)
+                            }
+                            sx={{
+                              color: '#f2a365',
+                              '&.Mui-checked': {
+                                color: '#f2a365',
+                              },
+                            }}
+                          />
+                        }
+                        label=""
+                      />
+                    ) : user.is_admin ? (
+                      'Да'
+                    ) : (
+                      'Нет'
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {isEditing ? (
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={editData.is_super_admin ?? user.is_super_admin}
+                            onChange={(e) =>
+                              handleEditChange(user.id, 'is_super_admin', e.target.checked)
+                            }
+                            sx={{
+                              color: '#f2a365',
+                              '&.Mui-checked': {
+                                color: '#f2a365',
+                              },
+                            }}
+                          />
+                        }
+                        label=""
+                      />
+                    ) : user.is_super_admin ? (
+                      'Да'
+                    ) : (
+                      'Нет'
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {isEditing ? (
+                      <>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={() => handleSave(user.id)}
+                          sx={{
+                            mr: 1,
+                            backgroundColor: '#f2a365',
+                            color: '#2a2f4a',
+                            '&:hover': { backgroundColor: '#d18c4a' },
+                            fontWeight: '700',
+                          }}
+                        >
+                          Сохранить
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleCancel(user.id)}
+                          sx={{
+                            color: '#f2a365',
+                            borderColor: '#f2a365',
+                            '&:hover': {
+                              backgroundColor: '#f2a365',
+                              color: '#2a2f4a',
+                            },
+                          }}
+                        >
+                          Отмена
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleEditClick(user)}
+                        sx={{
+                          borderColor: '#f2a365',
+                          color: '#f2a365',
+                          '&:hover': {
+                            backgroundColor: '#f2a365',
+                            color: '#2a2f4a',
+                          },
+                        }}
+                      >
+                        Редактировать
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>
-
-      <Dialog open={openDialog} onClose={handleDialogClose}>
-        <DialogTitle sx={{ color: '#f2a365' }}>
-          {editUser ? 'Редактировать пользователя' : 'Добавить пользователя'}
-        </DialogTitle>
-        <AdminUserForm
-          username={username}
-          setUsername={setUsername}
-          realname={realname}
-          setRealname={setRealname}
-          roleId={roleId}
-          setRoleId={setRoleId}
-          roles={roles}
-          isSuperAdmin={isSuperAdmin}
-          errors={errors}
-          setErrors={setErrors}
-          password={password}
-          setPassword={setPassword}
-          confirmPassword={confirmPassword}
-          setConfirmPassword={setConfirmPassword}
-        />
-        <DialogActions sx={{ backgroundColor: '#2a2f4a' }}>
-          <Button sx={{ color: '#f2a365' }} onClick={handleDialogClose}>
-            Отмена
-          </Button>
-          <Button
-            onClick={handleDialogSave}
-            sx={{
-              backgroundColor: '#f2a365',
-              color: '#2a2f4a',
-              '&:hover': { backgroundColor: '#d18c4a' },
-              fontWeight: '700',
-            }}
-          >
-            Сохранить
-          </Button>
-        </DialogActions>
-      </Dialog>
     </div>
   );
 }
 
-export default AdminPanelUsers;

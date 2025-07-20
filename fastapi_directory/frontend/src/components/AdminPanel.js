@@ -3,8 +3,29 @@ import AdminPanelUsers from './AdminPanelUsers';
 import AdminPanelErrors from './AdminPanelErrors';
 import { Box, Typography, Button } from '@mui/material';
 
+import React, { useEffect, useState } from 'react';
+import AdminPanelUsers from './AdminPanelUsers';
+import AdminPanelErrors from './AdminPanelErrors';
+import { Box, Typography, Button } from '@mui/material';
+import axios from 'axios';
+
 function AdminPanel({ token, onLogout }) {
-  // Здесь можно добавить управление пользователями, ошибками и логами
+  const [roleName, setRoleName] = useState('');
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await axios.get('/api/users/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setRoleName(response.data.role.name);
+      } catch (error) {
+        // handle error or ignore
+      }
+    };
+    fetchCurrentUser();
+  }, [token]);
+
   return (
     <Box
       sx={{
@@ -18,8 +39,10 @@ function AdminPanel({ token, onLogout }) {
       <Typography variant="h4" component="h2" sx={{ color: '#f2a365', mb: 3 }}>
         Панель администратора
       </Typography>
-      <AdminPanelUsers token={token} />
-      <AdminPanelErrors token={token} />
+      {(roleName === 'Главный администратор' || roleName === 'Администратор') && (
+        <AdminPanelErrors token={token} />
+      )}
+      {roleName === 'Главный администратор' && <AdminPanelUsers token={token} />}
       <Button
         variant="contained"
         onClick={onLogout}

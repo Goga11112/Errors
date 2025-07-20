@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.database import SessionLocal, get_db
-from app.models.role import Role
+from app.models.role import Role, RoleResponse
 from app.models.user import User
 from app.schemas.user import UserResponse
 from app.core.security import get_current_super_admin, get_password_hash
 
 router = APIRouter()
-
 
 from app.db.database import get_db as database_get_db
 
@@ -46,8 +45,7 @@ def init_admin(db: Session = Depends(get_db)):
     db.refresh(admin_user)
     return {"detail": "Пользователь admin создан"}
 
-
-@router.post("/roles/init", status_code=status.HTTP_201_CREATED)
+@router.post("/init", status_code=status.HTTP_201_CREATED)
 def init_roles(db: Session = Depends(get_db), current_user=Depends(get_current_super_admin)):
     for role_data in PREDEFINED_ROLES:
         db_role = db.query(Role).filter(Role.name == role_data["name"]).first()
@@ -57,7 +55,7 @@ def init_roles(db: Session = Depends(get_db), current_user=Depends(get_current_s
     db.commit()
     return {"detail": "Роли инициализированы"}
 
-@router.get("/roles/", response_model=list[str])
+@router.get("/", response_model=list[RoleResponse])
 def read_roles(db: Session = Depends(get_db), current_user=Depends(get_current_super_admin)):
     roles = db.query(Role).all()
-    return [role.name for role in roles]
+    return roles

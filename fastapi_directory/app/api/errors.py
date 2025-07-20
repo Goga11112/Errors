@@ -12,6 +12,7 @@ from app.db.database import SessionLocal
 from app.schemas.error import ErrorCreate, ErrorResponse, ErrorImageResponse
 from app.models.error import Error, ErrorImage
 from app.core.security import get_current_active_admin, get_current_active_user
+from app.api.admin_log import log_admin_action
 # Removed admin log import and logging calls as per user request
 # from app.api.admin_log import log_admin_action
 from fastapi import Request
@@ -50,7 +51,7 @@ async def create_error_with_files(
     solution_description: Optional[str] = Form(None),
     files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     import traceback
     import logging
@@ -75,7 +76,8 @@ async def create_error_with_files(
         db.refresh(db_error)
 
         # Логирование создания ошибки
-    # log_admin_action(db, request=request, action=f"Создана ошибка: {name}")
+        # Pass current_user.id explicitly to log_admin_action
+        #log_admin_action(db, request=request, action=f"Создана ошибка: {name}", admin_id=current_user.id)
 
         # Обработка файлов
         for file in files:
@@ -112,7 +114,7 @@ async def create_error_with_files(
             )
             db.add(db_image)
 
-        db.commit()
+        db.commit() 
         
         return db_error
         
@@ -141,10 +143,9 @@ async def update_error(error_id: int, error: ErrorCreate, db: Session = Depends(
     db_error.description = error.description
     db_error.solution_description = error.solution_description
     db.commit()
-    db.refresh(db_error)
-
+    db.refresh(db_error) 
     # Логирование обновления ошибки с указанием администратора
-    # log_admin_action(db, current_user=current_user, request=request, action=f"Обновлена ошибка: {db_error.name}")
+    log_admin_action(db, current_user=current_user, request=request, action=f"Обновлена ошибка: {db_error.name}")
 
     # Обновление изображений
     if error.images is not None:
@@ -169,7 +170,7 @@ async def delete_error(
     error_id: int,
     db: Session = Depends(get_db),
     request: Request = None,
-    current_user=Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     db_error = db.query(Error).filter(Error.id == error_id).first()
     if not db_error:
@@ -196,7 +197,7 @@ async def delete_error(
     db.query(ErrorImage).filter(ErrorImage.error_id == error_id).delete()
     db.delete(db_error)
     db.commit()
- 
+    #log_admin_action(db, request=request, action=f"Удалена ошибка: {db_error.name}") 
     return None
 
 @router.post("/{error_id}/images/", response_model=ErrorImageResponse, dependencies=[Depends(get_current_active_admin)])
@@ -250,4 +251,5 @@ def delete_error_image(
     # Удаляем запись из базы
     db.delete(db_image)
     db.commit()
+    #log_admin_action(db, request=db_image, action=f"Удалена ошибка: {db_image.image_url}") 
     return None
