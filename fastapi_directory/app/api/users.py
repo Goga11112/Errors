@@ -51,10 +51,19 @@ from fastapi import Request
 def read_users(request: Request, db: Session = Depends(get_db)):
     print(f"Request query params: {request.query_params}")
     users = db.query(User).options(joinedload(User.role)).all()
-    return users
+    # Map sadmin and admin to is_super_admin and is_admin for response
+    result = []
+    for user in users:
+        user.is_super_admin = user.sadmin
+        user.is_admin = user.admin
+        result.append(user)
+    return result
 
 @router.get("/me", response_model=UserResponse)
 def read_current_user(current_user: User = Depends(get_current_active_admin)):
+    # Map sadmin and admin to is_super_admin and is_admin for response
+    current_user.is_super_admin = current_user.sadmin
+    current_user.is_admin = current_user.admin
     return current_user
 
 from fastapi import Body

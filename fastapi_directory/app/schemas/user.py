@@ -9,6 +9,8 @@ class UserBase(BaseModel):
 class UserResponse(UserBase):
     id: int
     role: Optional[RoleResponse] = None
+    is_admin: bool
+    is_super_admin: bool
 
     class Config:
         orm_mode = True
