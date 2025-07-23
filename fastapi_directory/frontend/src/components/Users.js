@@ -334,8 +334,8 @@ function AdminPanelUsers({ token, onLogout }) {
                           </MenuItem>
                         ))}
                       </Select>
-                    ) : (
-                      user.role
+                      ) : (
+                      user.role ? user.role.name : ''
                     )}
                   </TableCell>
                   <TableCell sx={{ color: 'white' }}>

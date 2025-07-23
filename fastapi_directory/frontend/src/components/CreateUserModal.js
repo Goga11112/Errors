@@ -25,7 +25,7 @@ const style = {
   color: 'white',
 };
 
-function CreateUserModal({ open, onClose, token, roles, onUserCreated }) {
+function CreateUserModal({ open, onClose, token, roles, onUserCreated = () => {} }) {
   const [username, setUsername] = useState('');
   const [realname, setRealname] = useState('');
   const [password, setPassword] = useState('');
@@ -71,7 +71,8 @@ function CreateUserModal({ open, onClose, token, roles, onUserCreated }) {
       setIsAdmin(false);
       setIsSuperAdmin(false);
     } catch (err) {
-      setError('Ошибка при создании пользователя');
+      console.error('Create user error:', err.response?.data || err.message || err);
+      setError(err.response?.data?.detail || 'Ошибка при создании пользователя');
     }
   };
 

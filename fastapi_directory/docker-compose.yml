@@ -10,8 +10,10 @@ services:
       - "8000:8000"
     volumes:
       - ./app:/app
+      - ./uploaded_images:/app/uploaded_images
     environment:
       - UPLOAD_DIR=/app/uploaded_images
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/db_errors
     depends_on:
       - db
 

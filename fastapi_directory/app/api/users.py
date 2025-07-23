@@ -50,14 +50,23 @@ def create_user(user: UserCreate, db: Session = Depends(get_db), current_user: U
             realname=user.realname,
             password_hash=get_password_hash(user.password),
             role_id=user.role_id,
-            admin=False,  # Default for new users
-            sadmin=False  # Default for new users
+            admin=user.is_admin if hasattr(user, 'is_admin') else False,
+            sadmin=user.is_super_admin if hasattr(user, 'is_super_admin') else False,
         )
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
         log_admin_action(db, current_user, f"Создан пользователь: {db_user.username}")
-        return db_user
+        user_response = UserResponse(
+            id=db_user.id,
+            username=db_user.username,
+            realname=db_user.realname,
+            role_id=db_user.role_id,
+            role=db_user.role,
+            is_admin=db_user.admin,
+            is_super_admin=db_user.sadmin,
+        )
+        return user_response
 
     except ValueError as e:
         raise HTTPException(
@@ -79,9 +88,17 @@ def read_users(request: Request, db: Session = Depends(get_db)):
     # Map sadmin and admin to is_super_admin and is_admin for response
     result = []
     for user in users:
-        user.is_super_admin = user.sadmin
-        user.is_admin = user.admin
-        result.append(user)
+        user_data = {
+            "id": user.id,
+            "username": user.username,
+            "realname": user.realname,
+            "role_id": user.role_id,
+            "role": user.role,
+            "is_admin": user.admin,
+            "is_super_admin": user.sadmin,
+        }
+        user_response = UserResponse(**user_data)
+        result.append(user_response)
     return result
 
 @router.get("/me", response_model=UserResponse)
