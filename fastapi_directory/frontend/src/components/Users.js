@@ -165,7 +165,7 @@ function AdminPanelUsers({ token, onLogout }) {
       setError('Ошибка при сохранении пользователя');
     }
   };
-    const handleCreateUser = async (userData) => {
+  const handleCreateUser = async (userData) => {
     try {
       const response = await axios.post('/api/users/', {
         username: userData.username,
@@ -177,7 +177,7 @@ function AdminPanelUsers({ token, onLogout }) {
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setUsers([...users, response.data]);
+      await fetchUsers();
       return true;
     } catch (err) {
       setError(err.response?.data?.detail || 'Ошибка при создании пользователя');
@@ -393,21 +393,39 @@ function AdminPanelUsers({ token, onLogout }) {
                         </Button>
                       </>
                     ) : (
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => handleEditClick(user)}
-                        sx={{
-                          borderColor: '#f2a365',
-                          color: '#f2a365',
-                          '&:hover': {
-                            backgroundColor: '#f2a365',
-                            color: '#2a2f4a',
-                          },
-                        }}
-                      >
-                        Редактировать
-                      </Button>
+                      <>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleEditClick(user)}
+                          sx={{
+                            borderColor: '#f2a365',
+                            color: '#f2a365',
+                            '&:hover': {
+                              backgroundColor: '#f2a365',
+                              color: '#2a2f4a',
+                            },
+                            mr: 1,
+                          }}
+                        >
+                          Редактировать
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleDeleteClick(user.id)}
+                          sx={{
+                            borderColor: '#f44336',
+                            color: '#f44336',
+                            '&:hover': {
+                              backgroundColor: '#f44336',
+                              color: '#2a2f4a',
+                            },
+                          }}
+                        >
+                          Удалить
+                        </Button>
+                      </>
                     )}
                   </TableCell>
                 </TableRow>
