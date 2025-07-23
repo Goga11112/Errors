@@ -74,7 +74,7 @@ function AdminPanelUsers({ token, onLogout }) {
     return (
       user.username.toLowerCase().includes(search) ||
       user.realname.toLowerCase().includes(search) ||
-      user.role.name.toLowerCase().includes(search) ||
+      user.role.id.toLowerCase().includes(search) ||
       (user.is_admin ? 'admin' : '').includes(search) ||
       (user.is_super_admin ? 'super admin' : '').includes(search)
     );
@@ -302,7 +302,7 @@ function AdminPanelUsers({ token, onLogout }) {
                         ))}
                       </Select>
                     ) : (
-                      user.role.name
+                      user.role.id
                     )}
                   </TableCell>
                   <TableCell>

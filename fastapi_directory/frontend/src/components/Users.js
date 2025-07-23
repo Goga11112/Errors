@@ -16,6 +16,7 @@ import {
   Checkbox,
   FormControlLabel,
 } from '@mui/material';
+import CreateUserModal from './CreateUserModal';
 
 function AdminPanelUsers({ token, onLogout }) {
   const [users, setUsers] = useState([]);
@@ -24,6 +25,7 @@ function AdminPanelUsers({ token, onLogout }) {
   const [editRows, setEditRows] = useState({});
   const [error, setError] = useState('');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -74,7 +76,6 @@ function AdminPanelUsers({ token, onLogout }) {
     return (
       user.username.toLowerCase().includes(search) ||
       user.realname.toLowerCase().includes(search) ||
-      user.role.name.toLowerCase().includes(search) ||
       (user.is_admin ? 'admin' : '').includes(search) ||
       (user.is_super_admin ? 'super admin' : '').includes(search)
     );
@@ -163,7 +164,25 @@ function AdminPanelUsers({ token, onLogout }) {
       setError('Ошибка при сохранении пользователя');
     }
   };
-
+    const handleCreateUser = async (userData) => {
+    try {
+      const response = await axios.post('/api/users/', {
+        username: userData.username,
+        password: userData.password,
+        realname: userData.realname,
+        role_id: userData.role_id,  // Make sure this matches your backend
+        is_admin: userData.is_admin,
+        is_super_admin: userData.is_super_admin,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers([...users, response.data]);
+      return true;
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Ошибка при создании пользователя');
+      return false;
+    }
+  };
   const handleCancel = (id) => {
     setEditRows((prev) => {
       const newEditRows = { ...prev };
@@ -178,11 +197,25 @@ function AdminPanelUsers({ token, onLogout }) {
       <Typography variant="h4" gutterBottom sx={{ color: '#f2a365' }}>
         Пользователи
       </Typography>
+      <Button
+        variant="contained"
+        sx={{ mb: 2, backgroundColor: '#f2a365', color: '#2a2f4a', fontWeight: '700' }}
+        onClick={() => setCreateModalOpen(true)}
+      >
+        Создать пользователя
+      </Button>
       {error && (
         <Typography sx={{ color: '#ff6b6b', fontWeight: '700', mb: 1 }}>
           {error}
         </Typography>
       )}
+      <CreateUserModal
+  open={createModalOpen}
+  onClose={() => setCreateModalOpen(false)}
+  onSave={handleCreateUser}
+  roles={roles}
+  token={token}
+/>
       <TextField
         placeholder="Фильтр по имени, роли, статусу..."
         value={filterText}
@@ -302,7 +335,7 @@ function AdminPanelUsers({ token, onLogout }) {
                         ))}
                       </Select>
                     ) : (
-                      user.role.name
+                      user.role
                     )}
                   </TableCell>
                   <TableCell sx={{ color: 'white' }}>

@@ -18,32 +18,57 @@ def get_db():
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_admin)):
-    # Проверяем, что только главный администратор может назначать роли
-    if user.role_id is not None:
-        if current_user.role.name != "Администратор":
-            raise HTTPException(status_code=403, detail="Недостаточно прав для назначения роли")
-    else:
-        # Если роль не указана, назначаем роль "Пользователь"
-        role = db.query(Role).filter(Role.name == "Пользователь").first()
-        user.role_id = role.id if role else None
+    try:
+        # Проверяем, что только главный администратор может назначать роли
+        if user.role_id is not None:
+            if current_user.role.name != "Администратор":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Недостаточно прав для назначения роли"
+                )
+        else:
+            # Если роль не указана, назначаем роль "Пользователь"
+            role = db.query(Role).filter(Role.name == "Пользователь").first()
+            if not role:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Роль 'Пользователь' не найдена в системе"
+                )
+            user.role_id = role.id
 
-    # Проверяем, что username уникален
-    existing_user = db.query(User).filter(User.username == user.username).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Пользователь с таким именем уже существует")
+        # Проверяем, что username уникален
+        existing_user = db.query(User).filter(User.username == user.username).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Пользователь с таким именем уже существует"
+            )
 
-    hashed_password = get_password_hash(user.password)
-    db_user = User(
-        username=user.username,
-        realname=user.realname,
-        password_hash=hashed_password,
-        role_id=user.role_id
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    log_admin_action(db, current_user, f"Создан пользователь: {db_user.username}")
-    return db_user
+        hashed_password = get_password_hash(user.password)
+        db_user = User(
+            username=user.username,
+            realname=user.realname,
+            password_hash=get_password_hash(user.password),
+            role_id=user.role_id,
+            admin=False,  # Default for new users
+            sadmin=False  # Default for new users
+        )
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        log_admin_action(db, current_user, f"Создан пользователь: {db_user.username}")
+        return db_user
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Произошла ошибка при создании пользователя"
+        )
 
 from fastapi import Request
 

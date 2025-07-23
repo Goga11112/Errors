@@ -6,23 +6,24 @@ class UserBase(BaseModel):
     username: str
     realname: str
 
-class UserResponse(UserBase):
+class UserResponse(BaseModel):
     id: int
-    role: Optional[RoleResponse] = None
-    is_admin: bool
-    is_super_admin: bool
-
+    username: str
+    realname: str
+    role_id: int
+    is_admin: bool  # Make sure these match your database model
+    is_super_admin: bool  # Make sure these match your database model
+    
     class Config:
         orm_mode = True
 
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    username: str
     password: str
-
-    @validator('password')
-    def password_min_length(cls, v):
-        if len(v) < 6:
-            raise ValueError('Password must be at least 6 characters long')
-        return v
+    realname: str
+    role_id: int  # This must match what the frontend sends
+    is_admin: bool = False
+    is_super_admin: bool = False
 
 class UserUpdate(UserBase):
     password: Optional[str] = None
@@ -35,3 +36,4 @@ class UserUpdate(UserBase):
         if v is not None and len(v) < 6:
             raise ValueError('Password must be at least 6 characters long')
         return v
+
