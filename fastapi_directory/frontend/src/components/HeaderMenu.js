@@ -3,7 +3,7 @@ import { AppBar, Toolbar, IconButton, Menu, MenuItem, Typography, Box, Button, u
 import MenuIcon from "@mui/icons-material/Menu";
 import { Link } from "react-router-dom";
 
-function HeaderMenu({ userRole, onLoginClick }) {
+function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -16,7 +16,7 @@ function HeaderMenu({ userRole, onLoginClick }) {
     setAnchorEl(null);
   };
 
-  const isAdmin = userRole === "Главный администратор" || userRole === "sadmin" || userRole === "admin";
+  const hasAdminAccess = isAdmin || isSuperAdmin;
 
   return (
     <AppBar position="static" sx={{ backgroundColor: "#2a2f4a", boxShadow: "0 2px 6px rgba(0,0,0,0.3)" }}>
@@ -47,7 +47,7 @@ function HeaderMenu({ userRole, onLoginClick }) {
               onClose={handleMenuClose}
               PaperProps={{ sx: { backgroundColor: "#2a2f4a" } }}
             >
-              {!userRole && (
+              {!hasAdminAccess && !userRole && (
                 <MenuItem
                   onClick={() => {
                     handleMenuClose();
@@ -58,7 +58,7 @@ function HeaderMenu({ userRole, onLoginClick }) {
                   Авторизация
                 </MenuItem>
               )}
-              {isAdmin && (
+              {hasAdminAccess && (
                 <>
                   <MenuItem component={Link} to="/users" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                     Пользователи
@@ -69,9 +69,10 @@ function HeaderMenu({ userRole, onLoginClick }) {
                   <MenuItem component={Link} to="/admin/errors" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                     Ошибки
                   </MenuItem>
-                  <MenuItem component={Link} to="/userslist" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
+                  {/* Removed UserList menu item as per user request */}
+                  {/* <MenuItem component={Link} to="/userslist" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                     UserList
-                  </MenuItem>
+                  </MenuItem> */}
                   <MenuItem component={Link} to="/admin/contactinfo" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                     Контакты
                   </MenuItem>
@@ -81,12 +82,12 @@ function HeaderMenu({ userRole, onLoginClick }) {
           </>
         ) : (
           <Box sx={{ display: "flex", gap: 3 }}>
-            {!userRole && (
+            {!hasAdminAccess && !userRole && (
               <Button color="inherit" onClick={onLoginClick} sx={{ fontWeight: "bold", fontSize: "1rem", color: "#f2a365" }}>
                 Авторизация
               </Button>
             )}
-            {isAdmin && (
+            {hasAdminAccess && (
               <>
                 <Button
                   color="inherit"
@@ -112,14 +113,15 @@ function HeaderMenu({ userRole, onLoginClick }) {
                 >
                   Ошибки
                 </Button>
-                <Button
+                {/* Removed UserList button as per user request */}
+                {/* <Button
                   color="inherit"
                   component={Link}
                   to="/userslist"
                   sx={{ fontWeight: "bold", fontSize: "1rem", color: "#f2a365", "&:hover": { color: "#d18c4a" } }}
                 >
                   UserList
-                </Button>
+                </Button> */}
                 <Button
                   color="inherit"
                   component={Link}
@@ -131,8 +133,8 @@ function HeaderMenu({ userRole, onLoginClick }) {
               </>
             )}
           </Box>
-        )
-} </Toolbar>
+        )}
+      </Toolbar>
     </AppBar>
   );
 }

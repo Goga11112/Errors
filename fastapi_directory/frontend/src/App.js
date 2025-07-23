@@ -14,28 +14,61 @@ import { Box } from '@mui/material';
 function App() {
   const [userRole, setUserRole] = useState(null);
   const [userName, setUserName] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
 
+  const token = localStorage.getItem("access_token");
+
+  const fetchUserInfo = async (token) => {
+    try {
+      const response = await fetch("/api/users/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUserRole(data.role?.name || null);
+        setUserName(data.realname || null);
+        setIsAdmin(data.is_admin || false);
+        setIsSuperAdmin(data.is_super_admin || false);
+      } else {
+        setUserRole(null);
+        setUserName(null);
+        setIsAdmin(false);
+        setIsSuperAdmin(false);
+      }
+    } catch (error) {
+      setUserRole(null);
+      setUserName(null);
+      setIsAdmin(false);
+      setIsSuperAdmin(false);
+    }
+  };
+
   const handleLoginSuccess = (token, name = "Admin User") => {
-    // Здесь можно декодировать токен и получить роль пользователя и имя
-    // Для примера просто установим роль "admin" и имя "Admin User"
     localStorage.setItem("access_token", token);
-    setUserRole("admin");
     setUserName(name);
+    fetchUserInfo(token);
     setShowAuth(false);
   };
 
   const handleLogout = () => {
     setUserRole(null);
     setUserName(null);
+    setIsAdmin(false);
+    setIsSuperAdmin(false);
     localStorage.removeItem("access_token");
   };
 
-  const token = localStorage.getItem("access_token");
+  React.useEffect(() => {
+    if (token) {
+      fetchUserInfo(token);
+    }
+  }, [token]);
 
   return (
     <Router>
-      <HeaderMenu userRole={userRole} onLoginClick={() => setShowAuth(true)} />
+      <HeaderMenu userRole={userRole} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onLoginClick={() => setShowAuth(true)} />
       {showAuth ? (
         <AuthPage
           onLoginSuccess={handleLoginSuccess}

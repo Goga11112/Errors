@@ -61,7 +61,8 @@ function AdminPanelUsers({ token, onLogout }) {
       const response = await axios.get('/api/users/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setIsSuperAdmin(response.data.role.name === 'Главный администратор');
+      setIsSuperAdmin(response.data.is_super_admin);
+      setIsAdmin(response.data.is_admin);
     } catch (err) {
       // ignore
     }
@@ -245,7 +246,8 @@ function AdminPanelUsers({ token, onLogout }) {
             <TableRow>
               <TableCell sx={{ color: '#f2a365' }}>Имя пользователя</TableCell>
               <TableCell sx={{ color: '#f2a365' }}>Настоящее имя</TableCell>
-              <TableCell sx={{ color: '#f2a365' }}>Роль</TableCell>
+          {/* Removed Role column as per user request */}
+          {/* <TableCell sx={{ color: '#f2a365' }}>Роль</TableCell> */}
               <TableCell sx={{ color: '#f2a365' }}>Админ</TableCell>
               <TableCell sx={{ color: '#f2a365' }}>Супер админ</TableCell>
               <TableCell sx={{ color: '#f2a365' }}>Действия</TableCell>
@@ -305,37 +307,6 @@ function AdminPanelUsers({ token, onLogout }) {
                       />
                     ) : (
                       user.realname
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ color: 'white' }}>
-                    {isEditing ? (
-                      <Select
-                        value={editData.role_id ?? user.role.id}
-                        onChange={(e) =>
-                          handleEditChange(user.id, 'role_id', e.target.value)
-                        }
-                        size="small"
-                        sx={{
-                          color: 'white',
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#84a59d',
-                          },
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#f2a365',
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#f2a365',
-                          },
-                        }}
-                      >
-                        {roles.map((role) => (
-                          <MenuItem key={role.id} value={role.id}>
-                            {role.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      ) : (
-                      user.role.role_id
                     )}
                   </TableCell>
                   <TableCell sx={{ color: 'white' }}>
