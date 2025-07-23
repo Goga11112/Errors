@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    container_name: fastapi_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app
+    environment:
+      - UPLOAD_DIR=/app/uploaded_images
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: fastapi_frontend
+    ports:
+      - "3000:3000"
+    # Убрано монтирование локальной папки, чтобы не перезаписывать node_modules
+    # volumes:
+    #   - ./frontend:/app
+    #   - frontend_node_modules:/app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    stdin_open: true
+    tty: true
+
+  db:
+    image: postgres:15
+    container_name: fastapi_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: db_errors
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: fastapi_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmindata:/var/lib/pgadmin
+
+volumes:
+  pgdata:
+  pgadmindata:
+  frontend_node_modules:
