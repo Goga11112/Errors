@@ -157,14 +157,12 @@ function AdminPanelErrors({ token }) {
         // Upload new images if any
         if (imageFiles.length > 0) {
           await uploadNewImages(editingError.id);
-          // Reload updated error with images
-          const updatedErrorResponse = await axios.get(`${API_BASE_URL}/errors/${editingError.id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          setErrors(errors.map(err => (err.id === editingError.id ? updatedErrorResponse.data : err)));
-        } else {
-          setErrors(errors.map(err => (err.id === editingError.id ? response.data : err)));
         }
+        // Reload updated error with images
+        const updatedErrorResponse = await axios.get(`${API_BASE_URL}/errors/${editingError.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setErrors(errors.map(err => (err.id === editingError.id ? updatedErrorResponse.data : err)));
       } else {
         // Create new error with images
         const formData = new FormData();
@@ -216,6 +214,14 @@ function AdminPanelErrors({ token }) {
         const newImages = editingError.images.filter(img => img.id !== imageId);
         setEditingError({ ...editingError, images: newImages });
       }
+      // Also update the main errors list
+      setErrors(prevErrors => 
+        prevErrors.map(err => 
+          err.id === editingError?.id 
+            ? { ...err, images: err.images.filter(img => img.id !== imageId) }
+            : err
+        )
+      );
     } catch (err) {
       alert('Ошибка при удалении изображения');
     }
@@ -414,6 +420,44 @@ function AdminPanelErrors({ token }) {
                   },
                 }}
               />
+              
+              {/* Existing images when editing */}
+              {editingError && editingError.images && editingError.images.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle1" sx={{ color: '#f2a365', mb: 1 }}>
+                    Существующие изображения:
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {editingError.images.map((img) => (
+                      <Box key={img.id} sx={{ position: 'relative', display: 'inline-block' }}>
+                        <img
+                          src={`${API_BASE_URL.replace('/api', '')}${img.image_url}`}
+                          alt={`Error illustration ${img.id}`}
+                          style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4 }}
+                        />
+                        <IconButton
+                          size="small"
+                          aria-label="delete image"
+                          sx={{
+                            position: 'absolute',
+                            top: -8,
+                            right: -8,
+                            backgroundColor: 'rgba(255,255,255,0.9)',
+                            '&:hover': { backgroundColor: 'rgba(255,0,0,0.9)', color: 'white' },
+                            width: 24,
+                            height: 24,
+                            minHeight: 24,
+                          }}
+                          onClick={() => handleDeleteImage(img.id)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+              
               <input
                 type="file"
                 multiple

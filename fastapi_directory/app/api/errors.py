@@ -134,6 +134,13 @@ def read_errors(db: Session = Depends(get_db)):
     errors = db.query(Error).all()
     return errors
 
+@router.get("/{error_id}", response_model=ErrorResponse)
+def read_error(error_id: int, db: Session = Depends(get_db)):
+    db_error = db.query(Error).filter(Error.id == error_id).first()
+    if not db_error:
+        raise HTTPException(status_code=404, detail="Ошибка не найдена")
+    return db_error
+
 @router.put("/{error_id}", response_model=ErrorResponse)
 async def update_error(error_id: int, error: ErrorCreate, db: Session = Depends(get_db), request: Request = None, current_user=Depends(get_current_active_admin)):
     db_error = db.query(Error).filter(Error.id == error_id).first()
