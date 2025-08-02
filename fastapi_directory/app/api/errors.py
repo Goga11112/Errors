@@ -13,8 +13,6 @@ from app.schemas.error import ErrorCreate, ErrorResponse, ErrorImageResponse
 from app.models.error import Error, ErrorImage
 from app.core.security import get_current_active_admin, get_current_active_user
 from app.api.admin_log import log_admin_action
-# Removed admin log import and logging calls as per user request
-# from app.api.admin_log import log_admin_action
 from fastapi import Request
 from app.models.user import User
 
@@ -74,9 +72,6 @@ async def create_error_with_files(
         db.commit()
         db.refresh(db_error)
 
-        # Логирование создания ошибки
-        # Pass current_user.id explicitly to log_admin_action
-        #log_admin_action(db, request=request, action=f"Создана ошибка: {name}", admin_id=current_user.id)
 
         # Обработка файлов
         for file in files:
@@ -93,9 +88,6 @@ async def create_error_with_files(
             safe_filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', file.filename)
             filename = f"{uuid.uuid4().hex}_{safe_filename}"
             file_path = os.path.join(ABS_UPLOAD_DIR, filename)
-            logging.info(f"Saving file to {file_path}")
-            logging.info(f"Upload directory: {ABS_UPLOAD_DIR}")
-            logging.info(f"File path components: ABS_UPLOAD_DIR={ABS_UPLOAD_DIR}, filename={filename}")
             try:
                 logging.info(f"Attempting to save file to {file_path}")
                 if not os.path.exists(ABS_UPLOAD_DIR):
