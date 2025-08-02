@@ -32,8 +32,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 
-# Set upload directory to c:/Project/Errors/uploaded_images explicitly
-DEFAULT_UPLOAD_DIR = r"c:/Project/Errors/uploaded_images"
+DEFAULT_UPLOAD_DIR = "/app/uploaded_images"
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", DEFAULT_UPLOAD_DIR)
 ABS_UPLOAD_DIR = os.path.abspath(UPLOAD_DIR)
 logging.info(f"Using absolute upload directory: {ABS_UPLOAD_DIR}")
@@ -154,20 +153,18 @@ async def update_error(error_id: int, error: ErrorCreate, db: Session = Depends(
     # Логирование обновления ошибки с указанием администратора
     log_admin_action(db, current_user=current_user, request=request, action=f"Обновлена ошибка: {db_error.name}")
 
-    # Обновление изображений
+    # Обновление изображений - сохраняем существующие изображения и добавляем новые
     if error.images is not None:
-        # Удаляем старые изображения и файлы
-        old_images = db.query(ErrorImage).filter(ErrorImage.error_id == error_id).all()
-        for img in old_images:
-            # Удаляем файл с диска
-            file_path = img.image_url.lstrip('/')
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        db.query(ErrorImage).filter(ErrorImage.error_id == error_id).delete()
-        # Добавляем новые
+        # Получаем существующие изображения
+        existing_images = db.query(ErrorImage).filter(ErrorImage.error_id == error_id).all()
+        existing_image_urls = [img.image_url for img in existing_images]
+        
+        # Добавляем только новые изображения (те, что есть в новом списке, но нет в БД)
         for image_url in error.images:
-            db_image = ErrorImage(error_id=error_id, image_url=image_url)
-            db.add(db_image)
+            if image_url not in existing_image_urls:
+                db_image = ErrorImage(error_id=error_id, image_url=image_url)
+                db.add(db_image)
+        
         db.commit()
    
     return db_error
@@ -251,7 +248,7 @@ def delete_error_image(
     if not db_image:
         raise HTTPException(status_code=404, detail="Image not found")
     # Удаляем файл с диска
-    upload_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'uploaded_images'))
+    upload_dir = ABS_UPLOAD_DIR
     file_path = os.path.join(upload_dir, db_image.image_url.lstrip('/'))
     if os.path.exists(file_path):
         os.remove(file_path)
@@ -278,3 +275,41 @@ def get_orphaned_images(db: Session = Depends(get_db), current_user: User = Depe
         orphaned_images = db.query(ErrorImage).all()
     
     return orphaned_images
+
+@router.get("/images/failed/", response_model=list)
+def get_errors_with_failed_images(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_admin)):
+    """
+    Get all errors that have images that failed to load (images that are referenced in DB but don't exist in filesystem)
+    """
+    # Get all errors with their images
+    errors_with_images = db.query(Error).join(ErrorImage).all()
+    
+    # Check which images fail to load
+    failed_errors = []
+    for error in errors_with_images:
+        failed_images = []
+        for image in error.images:
+            # Check if image file exists
+            # Use the same upload directory as defined globally
+            upload_dir = ABS_UPLOAD_DIR
+            # Extract filename from image_url (e.g., /uploaded_images/filename.jpg -> filename.jpg)
+            filename = os.path.basename(image.image_url)
+            file_path = os.path.join(upload_dir, filename)
+            if not os.path.exists(file_path):
+                failed_images.append({
+                    "id": image.id,
+                    "image_url": image.image_url
+                })
+        
+        if failed_images:
+            failed_errors.append({
+                "error": {
+                    "id": error.id,
+                    "name": error.name,
+                    "description": error.description,
+                    "solution_description": error.solution_description
+                },
+                "failed_images": failed_images
+            })
+    
+    return failed_errors

@@ -68,23 +68,23 @@ function AdminPanelLogs({ token }) {
           <Table aria-label="admin logs table" sx={{ color: '#eaeaea' }}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ color: '#f2a365' }}>ID</TableCell>
-                <TableCell sx={{ color: '#f2a365' }}>Администратор</TableCell>
+                <TableCell sx={{ color: '#f2a365' }}>ID лога</TableCell>
+                <TableCell sx={{ color: '#f2a365' }}>Администратор выполнивший действие</TableCell>
                 <TableCell sx={{ color: '#f2a365' }}>Действие</TableCell>
                 <TableCell sx={{ color: '#f2a365' }}>IP адрес</TableCell>
-                <TableCell sx={{ color: '#f2a365' }}>User Agent</TableCell>
+                <TableCell sx={{ color: '#f2a365' }}>Используемое приложение</TableCell>
                 <TableCell sx={{ color: '#f2a365' }}>Дата</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {logs.map((log) => (
                 <TableRow key={log.id} sx={{ color: '#eaeaea' }}>
-                  <TableCell>{log.id}</TableCell>
-                  <TableCell>{log.admin_id}</TableCell>
-                  <TableCell>{log.action}</TableCell>
-                  <TableCell>{log.ip_address || '-'}</TableCell>
-                  <TableCell>{log.user_agent || '-'}</TableCell>
-                  <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
+                  <TableCell sx={{ color: '#eaeaea' }}>{log.id}</TableCell>
+                  <TableCell sx={{ color: '#eaeaea' }}>{log.admin_id}</TableCell>
+                  <TableCell sx={{ color: '#eaeaea' }}>{log.action}</TableCell>
+                  <TableCell sx={{ color: '#eaeaea' }}>{log.ip_address || '-'}</TableCell>
+                  <TableCell sx={{ color: '#eaeaea' }}>{log.user_agent || '-'}</TableCell>
+                  <TableCell sx={{ color: '#eaeaea' }}>{new Date(log.timestamp).toLocaleString()}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
