@@ -8,6 +8,7 @@ import AdminPanelContactInfo from "./components/AdminPanelContactInfo";
 // Assuming AdminPanelLogs and Users components exist or will be created
 import AdminPanelLogs from "./components/AdminPanelLogs";
 import Users from "./components/Users";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { Box } from '@mui/material';
 
 
@@ -50,6 +51,11 @@ function App() {
     setUserName(name);
     fetchUserInfo(token);
     setShowAuth(false);
+    
+    // If we're on the auth-required page, redirect to home
+    if (window.location.pathname === '/auth-required') {
+      window.location.href = '/';
+    }
   };
 
   const handleLogout = () => {
@@ -77,12 +83,70 @@ function App() {
       ) : (
         <Routes>
           <Route path="/" element={<ErrorsList />} />
-          <Route path="/admin/errors" element={<AdminPanelErrors token={token} />} />
-          <Route path="/admin/logs" element={<AdminPanelLogs token={token} />} />
-          <Route path="/users" element={<Users token={token} />} />
-          <Route path="/admin" element={<AdminPanelErrors token={token} />} />
-          {/* Добавьте другие маршруты по необходимости */}
-          <Route path="/admin/contactinfo" element={<AdminPanelContactInfo token={token} />} />
+          <Route 
+            path="/admin/errors" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminPanelErrors token={token} />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/logs" 
+            element={
+              <ProtectedRoute requiredRole="super_admin">
+                <AdminPanelLogs token={token} />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/users" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <Users token={token} />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminPanelErrors token={token} />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/contactinfo" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminPanelContactInfo token={token} />
+              </ProtectedRoute>
+            } 
+          />
+          {/* Authorization required message route */}
+          <Route 
+            path="/auth-required" 
+            element={
+              <div style={{ padding: '20px', color: '#eaeaea', textAlign: 'center' }}>
+                <h2>Необходимо в начале авторизироваться</h2>
+                <button 
+                  onClick={() => setShowAuth(true)}
+                  style={{ 
+                    padding: '10px 20px', 
+                    backgroundColor: '#f2a365', 
+                    color: '#2a2f4a', 
+                    border: 'none', 
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '16px'
+                  }}
+                >
+                  Авторизация
+                </button>
+              </div>
+            } 
+          />
         </Routes>
       )}
       {(token || userRole) && (

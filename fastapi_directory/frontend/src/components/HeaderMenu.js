@@ -47,7 +47,7 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
               onClose={handleMenuClose}
               PaperProps={{ sx: { backgroundColor: "#2a2f4a" } }}
             >
-              {!hasAdminAccess && !userRole && (
+              {(!hasAdminAccess && !userRole) && (
                 <MenuItem
                   onClick={() => {
                     handleMenuClose();
@@ -63,16 +63,14 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                   <MenuItem component={Link} to="/users" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                     Пользователи
                   </MenuItem>
-                  <MenuItem component={Link} to="/admin/logs" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
-                    Логи
-                  </MenuItem>
+                  {isSuperAdmin && (
+                    <MenuItem component={Link} to="/admin/logs" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
+                      Логи
+                    </MenuItem>
+                  )}
                   <MenuItem component={Link} to="/admin/errors" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                     Ошибки
                   </MenuItem>
-                  {/* Removed UserList menu item as per user request */}
-                  {/* <MenuItem component={Link} to="/userslist" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
-                    UserList
-                  </MenuItem> */}
                   <MenuItem component={Link} to="/admin/contactinfo" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                     Контакты
                   </MenuItem>
@@ -82,7 +80,7 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
           </>
         ) : (
           <Box sx={{ display: "flex", gap: 3 }}>
-            {!hasAdminAccess && !userRole && (
+            {(!hasAdminAccess && !userRole) && (
               <Button color="inherit" onClick={onLoginClick} sx={{ fontWeight: "bold", fontSize: "1rem", color: "#f2a365" }}>
                 Авторизация
               </Button>
@@ -97,14 +95,16 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                 >
                   Пользователи
                 </Button>
-                <Button
-                  color="inherit"
-                  component={Link}
-                  to="/admin/logs"
-                  sx={{ fontWeight: "bold", fontSize: "1rem", color: "#f2a365", "&:hover": { color: "#d18c4a" } }}
-                >
-                  Логи
-                </Button>
+                {isSuperAdmin && (
+                  <Button
+                    color="inherit"
+                    component={Link}
+                    to="/admin/logs"
+                    sx={{ fontWeight: "bold", fontSize: "1rem", color: "#f2a365", "&:hover": { color: "#d18c4a" } }}
+                  >
+                    Логи
+                  </Button>
+                )}
                 <Button
                   color="inherit"
                   component={Link}
@@ -113,15 +113,6 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                 >
                   Ошибки
                 </Button>
-                {/* Removed UserList button as per user request */}
-                {/* <Button
-                  color="inherit"
-                  component={Link}
-                  to="/userslist"
-                  sx={{ fontWeight: "bold", fontSize: "1rem", color: "#f2a365", "&:hover": { color: "#d18c4a" } }}
-                >
-                  UserList
-                </Button> */}
                 <Button
                   color="inherit"
                   component={Link}
