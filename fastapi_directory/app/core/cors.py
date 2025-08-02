@@ -7,7 +7,8 @@ def setup_cors(app):
         allow_origins=[
             "http://localhost:3000",
             "http://192.168.1.33",
-            "http://SiebelError.ru"
+            "http://SiebelError.ru",
+            "http://localhost:8090"
         ],
         allow_credentials=True,
         allow_methods=["*"],

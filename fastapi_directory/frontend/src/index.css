@@ -5,3 +5,29 @@ html, body, #root {
   color: #eaeaea;
   font-family: Arial, sans-serif;
 }
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1b1f33;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #f2a365;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e08a4d;
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #f2a365 #1b1f33;
+}

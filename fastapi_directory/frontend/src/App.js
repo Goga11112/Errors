@@ -22,7 +22,7 @@ function App() {
 
   const fetchUserInfo = async (token) => {
     try {
-      const response = await fetch("/api/users/me", {
+      const response = await fetch("/api/auth/users/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -85,7 +85,7 @@ function App() {
           <Route path="/admin/contactinfo" element={<AdminPanelContactInfo token={token} />} />
         </Routes>
       )}
-      {userRole && (
+      {(token || userRole) && (
         <div>
           <button onClick={handleLogout} style={{ position: "fixed", top: 10, right: 10 }}>
             Выйти
@@ -103,7 +103,7 @@ function App() {
               color: "#333"
             }}
           >
-            {userName}
+            {userName || "Пользователь"}
           </footer>
         </div>
       )}

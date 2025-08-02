@@ -101,11 +101,24 @@ def read_users(request: Request, db: Session = Depends(get_db)):
         result.append(user_response)
     return result
 
+import logging
+
 @router.get("/me", response_model=UserResponse)
 def read_current_user(current_user: User = Depends(get_current_active_admin)):
+    logging.info(f"read_current_user called with user: {current_user.username if current_user else 'None'}")
     # Map sadmin and admin to is_super_admin and is_admin for response
-    current_user.is_super_admin = current_user.sadmin
-    current_user.is_admin = current_user.admin
+    current_user.is_super_admin = getattr(current_user, 'sadmin', False)
+    current_user.is_admin = getattr(current_user, 'admin', False)
+    return current_user
+
+from app.core.security import get_current_active_user
+
+@router.get("/me/basic", response_model=UserResponse)
+def read_current_user_basic(current_user = Depends(get_current_active_user)):
+    logging.info(f"read_current_user_basic called with user: {current_user.username if current_user else 'None'}")
+    # Map sadmin and admin to is_super_admin and is_admin for response
+    current_user.is_super_admin = getattr(current_user, 'sadmin', False)
+    current_user.is_admin = getattr(current_user, 'admin', False)
     return current_user
 
 from fastapi import Body

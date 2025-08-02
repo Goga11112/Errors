@@ -133,7 +133,7 @@ function ErrorsList() {
         }}
       />
       <Grid container spacing={4}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={8}>
           {filteredErrors.length === 0 ? (
             <Typography sx={{ color: '#eaeaea' }}>Список ошибок пуст</Typography>
           ) : (
@@ -165,49 +165,51 @@ function ErrorsList() {
                     Решение: {err.solution_description || 'Нет описания решения'}
                   </Typography>
                   {err.images && err.images.length > 0 && (
-                    <Grid container spacing={2}>
+                    <Box sx={{ display: 'flex', overflowX: 'auto', gap: 2, pb: 2 }}>
                       {err.images.map((img, index) => (
-                        <Grid item xs={6} sm={4} md={3} key={img.id}>
+                        <Box
+                          key={img.id}
+                          sx={{
+                            flex: '0 0 auto',
+                            cursor: 'pointer',
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                            transition: 'transform 0.3s',
+                            '&:hover': { transform: 'scale(1.05)' },
+                            width: '400px',
+                          }}
+                          onClick={() =>
+                            openImageModal(`${API_BASE_URL}${encodeURI(img.image_url)}`, `Error illustration ${img.id}`, index)
+                          }
+                        >
+                          <img
+                            src={`${API_BASE_URL}${encodeURI(img.image_url)}`}
+                            alt={`Error illustration ${img.id}`}
+                            style={{ width: '100%', height: '300px', display: 'block', objectFit: 'cover' }}
+                          />
                           <Box
                             sx={{
-                              cursor: 'pointer',
-                              borderRadius: 2,
-                              overflow: 'hidden',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                              transition: 'transform 0.3s',
-                              '&:hover': { transform: 'scale(1.05)' },
+                              padding: '8px 16px',
+                              backgroundColor: '#f2a365',
+                              fontSize: 16,
+                              fontWeight: 'bold',
+                              textAlign: 'center',
+                              color: '#2a2f4a',
                             }}
-                            onClick={() =>
-                              openImageModal(`${API_BASE_URL}${encodeURI(img.image_url)}`, `Error illustration ${img.id}`, index)
-                            }
                           >
-                            <img
-                              src={`${API_BASE_URL}${encodeURI(img.image_url)}`}
-                              alt={`Error illustration ${img.id}`}
-                              style={{ width: '100%', height: 'auto', display: 'block' }}
-                            />
-                            <Box
-                              sx={{
-                                padding: '4px 8px',
-                                backgroundColor: '#f2a365',
-                                fontSize: 14,
-                                textAlign: 'center',
-                                color: '#2a2f4a',
-                              }}
-                            >
-                              Image {index + 1}
-                            </Box>
+                            Image {index + 1}
                           </Box>
-                        </Grid>
+                        </Box>
                       ))}
-                    </Grid>
+                    </Box>
                   )}
                 </AccordionDetails>
               </Accordion>
             ))
           )}
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <ContactInfo />
         </Grid>
       </Grid>

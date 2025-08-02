@@ -58,7 +58,7 @@ function AdminPanelUsers({ token, onLogout }) {
 
   const checkSuperAdmin = async () => {
     try {
-      const response = await axios.get('/api/users/me', {
+      const response = await axios.get('/api/auth/users/me/basic', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setIsSuperAdmin(response.data.is_super_admin);
@@ -178,6 +178,7 @@ function AdminPanelUsers({ token, onLogout }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       await fetchUsers();
+      setCreateModalOpen(false); // Close the modal after successful creation
       return true;
     } catch (err) {
       setError(err.response?.data?.detail || 'Ошибка при создании пользователя');
