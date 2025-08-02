@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
-UPLOAD_DIR = os.getenv("UPLOAD_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'uploaded_images')))
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/app/uploaded_images")
 ABS_UPLOAD_DIR = os.path.abspath(UPLOAD_DIR)
 
 # Mount StaticFiles at root level for uploaded_images
