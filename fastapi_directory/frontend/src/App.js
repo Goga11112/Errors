@@ -10,6 +10,7 @@ import AdminPanelLogs from "./components/AdminPanelLogs";
 import Users from "./components/Users";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Box } from '@mui/material';
+import OrphanedImages from "./components/OrphanedImages";
 
 
 function App() {
@@ -120,6 +121,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <AdminPanelContactInfo token={token} />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/orphaned-images" 
+            element={
+              <ProtectedRoute requiredRole="super_admin">
+                <OrphanedImages token={token} />
               </ProtectedRoute>
             } 
           />

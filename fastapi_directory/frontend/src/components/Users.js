@@ -95,15 +95,15 @@ function AdminPanelUsers({ token, onLogout }) {
   const handleEditClick = (user) => {
     setEditRows((prev) => ({
       ...prev,
-      [user.id]: {
-        username: user.username,
-        realname: user.realname,
-        role_id: user.role.id,
-        is_admin: user.is_admin,
-        is_super_admin: user.is_super_admin,
-      },
-    }));
-    setError('');
+        [user.id]: {
+          username: user.username,
+          realname: user.realname,
+          role_id: user.role_id,
+          is_admin: user.is_admin,
+          is_super_admin: user.is_super_admin,
+        },
+      }));
+      setError('');
   };
 
   const handleDeleteClick = async (userId) => {

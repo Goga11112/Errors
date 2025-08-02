@@ -260,3 +260,21 @@ def delete_error_image(
     db.commit()
     #log_admin_action(db, request=db_image, action=f"Удалена ошибка: {db_image.image_url}") 
     return None
+
+@router.get("/images/orphaned/", response_model=list[ErrorImageResponse])
+def get_orphaned_images(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_admin)):
+    """
+    Get all images that are not linked to any error (orphaned images)
+    """
+    # Get all image IDs that are linked to errors
+    linked_image_ids = db.query(ErrorImage.id).join(Error).all()
+    linked_image_ids = [img_id[0] for img_id in linked_image_ids]
+    
+    # Get all images that are not in the linked list
+    if linked_image_ids:
+        orphaned_images = db.query(ErrorImage).filter(~ErrorImage.id.in_(linked_image_ids)).all()
+    else:
+        # If no images are linked, all images are orphaned
+        orphaned_images = db.query(ErrorImage).all()
+    
+    return orphaned_images

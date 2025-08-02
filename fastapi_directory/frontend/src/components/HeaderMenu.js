@@ -74,6 +74,11 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                   <MenuItem component={Link} to="/admin/contactinfo" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                     Контакты
                   </MenuItem>
+                  {isSuperAdmin && (
+                    <MenuItem component={Link} to="/admin/orphaned-images" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
+                      Изображения
+                    </MenuItem>
+                  )}
                 </>
               )}
             </Menu>
@@ -121,6 +126,16 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                 >
                   Контакты
                 </Button>
+                {isSuperAdmin && (
+                  <Button
+                    color="inherit"
+                    component={Link}
+                    to="/admin/orphaned-images"
+                    sx={{ fontWeight: "bold", fontSize: "1rem", color: "#f2a365", "&:hover": { color: "#d18c4a" } }}
+                  >
+                    Изображения
+                  </Button>
+                )}
               </>
             )}
           </Box>
