@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+ import React, { useEffect, useState, useRef } from 'react';
 import {
   Accordion,
   AccordionSummary,
@@ -21,7 +21,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import axios from 'axios';
 
-const API_BASE_URL = `http://localhost:8000/api`;
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api';
 
 function AdminPanelErrors({ token }) {
   const [errors, setErrors] = useState([]);
@@ -313,7 +313,7 @@ function AdminPanelErrors({ token }) {
                       {err.images.map((img) => (
                         <Box key={img.id} sx={{ position: 'relative', display: 'inline-block' }}>
                           <img
-                            src={`${API_BASE_URL.replace('/api', '')}${img.image_url}`}
+                            src={`${encodeURI(img.image_url)}`}
                             alt={`Error illustration ${img.id}`}
                             style={{ maxWidth: '30%', maxHeight: 200, objectFit: 'contain' }}
                           />
@@ -431,7 +431,7 @@ function AdminPanelErrors({ token }) {
                     {editingError.images.map((img) => (
                       <Box key={img.id} sx={{ position: 'relative', display: 'inline-block' }}>
                         <img
-                          src={`${API_BASE_URL.replace('/api', '')}${img.image_url}`}
+                          src={`${encodeURI(img.image_url)}`}
                           alt={`Error illustration ${img.id}`}
                           style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4 }}
                         />

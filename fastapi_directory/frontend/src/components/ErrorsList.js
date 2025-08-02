@@ -5,7 +5,8 @@ import ContactInfo from "./ContactInfo";
 import { TextField, Accordion, AccordionSummary, AccordionDetails, Typography, Grid, Box } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api';
+const BASE_URL = process.env.REACT_APP_BASE_URL || '';
 
 function ErrorsList() {
   const [errors, setErrors] = useState([]);
@@ -24,7 +25,7 @@ function ErrorsList() {
 
   const fetchErrors = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/errors/`);
+      const response = await axios.get(`${API_BASE_URL}/errors/`);
       setErrors(response.data);
     } catch (err) {
       if (err.response) {
@@ -66,7 +67,7 @@ function ErrorsList() {
     const images = errors.find((err) => err.id === expandedId)?.images || [];
     const prevIndex = (currentImageIndex - 1 + images.length) % images.length;
     const img = images[prevIndex];
-    setModalImageUrl(`${API_BASE_URL}${img.image_url}`);
+    setModalImageUrl(`${img.image_url}`);
     setModalImageAlt(`Error illustration ${img.id}`);
     setCurrentImageIndex(prevIndex);
   };
@@ -76,7 +77,7 @@ function ErrorsList() {
     const images = errors.find((err) => err.id === expandedId)?.images || [];
     const nextIndex = (currentImageIndex + 1) % images.length;
     const img = images[nextIndex];
-    setModalImageUrl(`${API_BASE_URL}${img.image_url}`);
+    setModalImageUrl(`${img.image_url}`);
     setModalImageAlt(`Error illustration ${img.id}`);
     setCurrentImageIndex(nextIndex);
   };
@@ -180,11 +181,11 @@ function ErrorsList() {
                             width: '400px',
                           }}
                           onClick={() =>
-                            openImageModal(`${API_BASE_URL}${encodeURI(img.image_url)}`, `Error illustration ${img.id}`, index)
+                            openImageModal(`${encodeURI(img.image_url)}`, `Error illustration ${img.id}`, index)
                           }
                         >
                           <img
-                            src={`${API_BASE_URL}${encodeURI(img.image_url)}`}
+                            src={`${encodeURI(img.image_url)}`}
                             alt={`Error illustration ${img.id}`}
                             style={{ width: '100%', height: '300px', display: 'block', objectFit: 'cover' }}
                           />

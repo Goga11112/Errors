@@ -21,7 +21,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 
-const API_BASE_URL = `http://localhost:8000/api`;
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api';
 
 function OrphanedImages({ token }) {
   const [orphanedImages, setOrphanedImages] = useState([]);
@@ -121,7 +121,7 @@ function OrphanedImages({ token }) {
                     <CardMedia
                       component="img"
                       height="200"
-                      image={`${API_BASE_URL.replace('/api', '')}${img.image_url}`}
+                      image={img.image_url}
                       alt={`Orphaned image ${img.id}`}
                       sx={{ objectFit: 'contain' }}
                     />

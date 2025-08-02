@@ -94,11 +94,16 @@ async def create_error_with_files(
             filename = f"{uuid.uuid4().hex}_{safe_filename}"
             file_path = os.path.join(ABS_UPLOAD_DIR, filename)
             logging.info(f"Saving file to {file_path}")
+            logging.info(f"Upload directory: {ABS_UPLOAD_DIR}")
+            logging.info(f"File path components: ABS_UPLOAD_DIR={ABS_UPLOAD_DIR}, filename={filename}")
             try:
                 logging.info(f"Attempting to save file to {file_path}")
-                if not os.access(os.path.dirname(file_path), os.W_OK):
-                    logging.error(f"No write permission to directory: {os.path.dirname(file_path)}")
-                    raise PermissionError(f"No write permission to directory: {os.path.dirname(file_path)}")
+                if not os.path.exists(ABS_UPLOAD_DIR):
+                    logging.error(f"Upload directory does not exist: {ABS_UPLOAD_DIR}")
+                    raise FileNotFoundError(f"Upload directory does not exist: {ABS_UPLOAD_DIR}")
+                if not os.access(ABS_UPLOAD_DIR, os.W_OK):
+                    logging.error(f"No write permission to directory: {ABS_UPLOAD_DIR}")
+                    raise PermissionError(f"No write permission to directory: {ABS_UPLOAD_DIR}")
                 with open(file_path, "wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
                 logging.info(f"File saved successfully: {file_path}")
@@ -189,6 +194,8 @@ async def delete_error(
         filename = os.path.basename(img.image_url)
         file_path = os.path.join(ABS_UPLOAD_DIR, filename)
         logging.info(f"Attempting to delete image file: {file_path}")
+        logging.info(f"Upload directory: {ABS_UPLOAD_DIR}")
+        logging.info(f"File path components: ABS_UPLOAD_DIR={ABS_UPLOAD_DIR}, filename={filename}")
         try:
             if os.path.exists(file_path):
                 os.remove(file_path)
@@ -216,7 +223,16 @@ async def upload_error_image(error_id: int, file: UploadFile = File(...), db: Se
     file_path = os.path.join(ABS_UPLOAD_DIR, filename)
     import logging
     logging.info(f"Saving file to {file_path}")
+    logging.info(f"Upload directory: {ABS_UPLOAD_DIR}")
+    logging.info(f"File path components: ABS_UPLOAD_DIR={ABS_UPLOAD_DIR}, filename={filename}")
     try:
+        logging.info(f"Attempting to save file to {file_path}")
+        if not os.path.exists(ABS_UPLOAD_DIR):
+            logging.error(f"Upload directory does not exist: {ABS_UPLOAD_DIR}")
+            raise FileNotFoundError(f"Upload directory does not exist: {ABS_UPLOAD_DIR}")
+        if not os.access(ABS_UPLOAD_DIR, os.W_OK):
+            logging.error(f"No write permission to directory: {ABS_UPLOAD_DIR}")
+            raise PermissionError(f"No write permission to directory: {ABS_UPLOAD_DIR}")
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         logging.info(f"File saved successfully: {file_path}")
@@ -250,8 +266,15 @@ def delete_error_image(
     # Удаляем файл с диска
     upload_dir = ABS_UPLOAD_DIR
     file_path = os.path.join(upload_dir, db_image.image_url.lstrip('/'))
+    logging.info(f"Attempting to delete image file: {file_path}")
+    logging.info(f"Upload directory: {upload_dir}")
+    logging.info(f"Stripped image URL: {db_image.image_url.lstrip('/')}")
+    logging.info(f"Full file path: {file_path}")
     if os.path.exists(file_path):
         os.remove(file_path)
+        logging.info(f"Deleted image file: {file_path}")
+    else:
+        logging.warning(f"Image file not found for deletion: {file_path}")
     # Удаляем запись из базы
     db.delete(db_image)
     db.commit()
@@ -292,9 +315,23 @@ def get_errors_with_failed_images(db: Session = Depends(get_db), current_user: U
             # Check if image file exists
             # Use the same upload directory as defined globally
             upload_dir = ABS_UPLOAD_DIR
-            # Extract filename from image_url (e.g., /uploaded_images/filename.jpg -> filename.jpg)
-            filename = os.path.basename(image.image_url)
+            # Construct file path by removing the /uploaded_images/ prefix from image_url
+            if image.image_url.startswith("/uploaded_images/"):
+                filename = image.image_url[len("/uploaded_images/"):]
+            else:
+                # Fallback to old method if URL doesn't start with /uploaded_images/
+                filename = image.image_url.lstrip('/')
             file_path = os.path.join(upload_dir, filename)
+            
+            # Log for debugging
+            logging.info(f"Checking image: {image.image_url}")
+            logging.info(f"Upload directory: {upload_dir}")
+            logging.info(f"Filename: {filename}")
+            logging.info(f"Full file path: {file_path}")
+            logging.info(f"File exists: {os.path.exists(file_path)}")
+            logging.info(f"Upload directory exists: {os.path.exists(upload_dir)}")
+            logging.info(f"Upload directory writable: {os.access(upload_dir, os.W_OK)}")
+            
             if not os.path.exists(file_path):
                 failed_images.append({
                     "id": image.id,

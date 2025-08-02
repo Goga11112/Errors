@@ -18,7 +18,7 @@ function AuthPage({ onLoginSuccess, onContinueAsGuest }) {
     try {
       if (isLogin) {
         // Login request
-        const response = await axios.post(`http://localhost:8000/api/auth/token`, new URLSearchParams({
+        const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL || '/api'}/auth/token`, new URLSearchParams({
           username,
           password,
         }), {
@@ -31,7 +31,7 @@ function AuthPage({ onLoginSuccess, onContinueAsGuest }) {
         onLoginSuccess(token);
       } else {
         // Registration request
-        await axios.post(`http://localhost:8000/api/auth/register`, {
+        await axios.post(`${process.env.REACT_APP_API_BASE_URL || '/api'}/auth/register`, {
           username,
           password,
         });

@@ -21,6 +21,20 @@ app = FastAPI()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/app/uploaded_images")
 ABS_UPLOAD_DIR = os.path.abspath(UPLOAD_DIR)
 
+# Ensure upload directory exists with proper permissions
+import pathlib
+import logging
+
+try:
+    pathlib.Path(ABS_UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+    # Check if directory exists and is writable
+    if os.path.exists(ABS_UPLOAD_DIR) and os.access(ABS_UPLOAD_DIR, os.W_OK):
+        logging.info(f"Upload directory ensured and writable: {ABS_UPLOAD_DIR}")
+    else:
+        logging.error(f"Upload directory not accessible: {ABS_UPLOAD_DIR}")
+except Exception as e:
+    logging.error(f"Failed to create upload directory {ABS_UPLOAD_DIR}: {e}")
+
 # Mount StaticFiles at root level for uploaded_images
 app.mount("/uploaded_images", StaticFiles(directory=ABS_UPLOAD_DIR), name="uploaded_images")
 
@@ -76,8 +90,6 @@ setup_cors(app)
 
 # Подключение маршрутов API с префиксом "/api"
 app.include_router(api_router, prefix="/api")
-# app.include_router(users_router, prefix="/api/users")
-# app.include_router(roles_router, prefix="/api/roles")
 
 
 def custom_openapi():

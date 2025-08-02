@@ -19,7 +19,7 @@ function AdminPanelLogs({ token }) {
           limit: rowsPerPage
         });
         console.log("Authorization header:", `Bearer ${token}`);
-        const response = await axios.get('http://localhost:8000/api/admin_logs/', {
+        const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL || '/api'}/admin_logs/`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
