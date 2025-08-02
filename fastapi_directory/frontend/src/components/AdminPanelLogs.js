@@ -14,11 +14,7 @@ function AdminPanelLogs({ token }) {
     const fetchLogs = async () => {
       setLoading(true);
       try {
-        console.log("Sending request with params:", {
-          skip: page * rowsPerPage,
-          limit: rowsPerPage
-        });
-        console.log("Authorization header:", `Bearer ${token}`);
+       
         const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL || '/api'}/admin_logs/`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -41,7 +37,6 @@ function AdminPanelLogs({ token }) {
         setLoading(false);
       }
     };
-    console.log("Token in AdminPanelLogs:", token);
     fetchLogs();
   }, [token, page, rowsPerPage]);
 

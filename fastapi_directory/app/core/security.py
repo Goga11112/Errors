@@ -29,12 +29,12 @@ class JWTBearer(HTTPBearer):
     async def __call__(self, request: Request) -> str:
         credentials: HTTPAuthorizationCredentials = await super().__call__(request)
         if not credentials.scheme == "Bearer":
-            logging.error(f"Invalid authentication scheme: {credentials.scheme}")
+            #logging.error(f"Invalid authentication scheme: {credentials.scheme}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid authentication scheme"
             )
-        logging.info(f"JWT token received: {credentials.credentials}")
+        #logging.info(f"JWT token received: {credentials.credentials}")
         return credentials.credentials
 
 jwt_bearer = JWTBearer()
@@ -74,33 +74,29 @@ def get_current_user(
     db: Session = Depends(get_db)
 ) -> User:
     """Получает текущего пользователя из JWT токена"""
-    import logging
+   # import logging
     auth_header = request.headers.get("Authorization")
-    if not auth_header:
-        logging.error("Authorization header missing")
-    else:
-        logging.info(f"Authorization header: {auth_header}")
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        logging.info(f"Decoding token: {token}")
+        #logging.info(f"Decoding token: {token}")
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         if (username := payload.get("sub")) is None:
-            logging.error("JWT payload does not contain 'sub'")
+            #logging.error("JWT payload does not contain 'sub'")
             raise credentials_exception
     except JWTError as exc:
-        logging.error(f"JWT decode error: {exc}")
+        #logging.error(f"JWT decode error: {exc}")
         raise credentials_exception from exc
     
     user = get_user(db, username)
     if user is None:
-        logging.error(f"User not found in DB: {username}")
+        #logging.error(f"User not found in DB: {username}")
         raise credentials_exception
         
-    logging.info(f"Authenticated user: {username} with role id: {user.role.id if user.role else 'None'}")
+    #logging.info(f"Authenticated user: {username} with role id: {user.role.id if user.role else 'None'}")
     return user
 
 def get_current_active_user(
