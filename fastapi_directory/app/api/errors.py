@@ -118,6 +118,9 @@ async def create_error_with_files(
 
         db.commit() 
         
+        # Логирование создания ошибки
+        log_admin_action(db, current_user, f"Администратор {current_user.username} создал ошибку: {db_error.name}", request)
+        
         return db_error
         
     except HTTPException as http_exc:
@@ -154,7 +157,7 @@ async def update_error(error_id: int, error: ErrorCreate, db: Session = Depends(
     db.commit()
     db.refresh(db_error) 
     # Логирование обновления ошибки с указанием администратора
-    log_admin_action(db, current_user=current_user, request=request, action=f"Обновлена ошибка: {db_error.name}")
+    log_admin_action(db, current_user, f"Администратор {current_user.username} обновил ошибку: {db_error.name}", request)
 
     # Обновление изображений - сохраняем существующие изображения и добавляем новые
     if error.images is not None:
@@ -169,6 +172,9 @@ async def update_error(error_id: int, error: ErrorCreate, db: Session = Depends(
                 db.add(db_image)
         
         db.commit()
+   
+    # Логирование обновления ошибки
+    log_admin_action(db, current_user, f"Администратор {current_user.username} обновил ошибку: {db_error.name}", request)
    
     return db_error
 
@@ -215,11 +221,11 @@ async def delete_error(
     db.query(ErrorImage).filter(ErrorImage.error_id == error_id).delete()
     db.delete(db_error)
     db.commit()
-    #log_admin_action(db, request=request, action=f"Удалена ошибка: {db_error.name}") 
+    log_admin_action(db, current_user, f"Администратор {current_user.username} удалил ошибку: {db_error.name}", request)
     return None
 
 @router.post("/{error_id}/images/", response_model=ErrorImageResponse, dependencies=[Depends(get_current_active_admin)])
-async def upload_error_image(error_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_error_image(error_id: int, file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_active_admin)):
     if file.content_type not in ["image/png", "image/jpeg", "image/jpg"]:
         raise HTTPException(status_code=400, detail="Invalid image type. Only PNG and JPG are allowed.")
 
@@ -258,6 +264,9 @@ async def upload_error_image(error_id: int, file: UploadFile = File(...), db: Se
     db.commit()
     db.refresh(error_image)
 
+    # Логирование загрузки изображения
+    log_admin_action(db, current_user, f"Администратор {current_user.username} загрузил изображение для ошибки ID {error_id}: {image_url}")
+
     return error_image
 
 from fastapi import Query
@@ -266,6 +275,7 @@ from fastapi import Query
 def delete_error_image(
     image_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_admin),
 ):
     db_image = db.query(ErrorImage).filter(ErrorImage.id == image_id).first()
     if not db_image:
@@ -293,7 +303,8 @@ def delete_error_image(
     # Удаляем запись из базы
     db.delete(db_image)
     db.commit()
-    #log_admin_action(db, request=db_image, action=f"Удалена ошибка: {db_image.image_url}") 
+    # Логирование удаления изображения
+    log_admin_action(db, current_user, f"Администратор {current_user.username} удалил изображение: {db_image.image_url}")
     return None
 
 @router.get("/images/orphaned/", response_model=List[dict])
@@ -356,7 +367,8 @@ def get_orphaned_images(db: Session = Depends(get_db)):
 @router.delete("/images/delete-orphaned/{file_path:path}")
 async def delete_orphaned_file(
     file_path: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_admin)
 ):
     """Удаляет бесхозный файл по его пути"""
     try:
@@ -385,6 +397,9 @@ async def delete_orphaned_file(
         
         os.remove(file_full_path)
         
+        # Логирование удаления бесхозного файла
+        log_admin_action(db, current_user, f"Администратор {current_user.username} удалил бесхозный файл: {file_path}")
+        
         return {"status": "success", "message": "File deleted"}
     
     except HTTPException:
@@ -395,7 +410,7 @@ async def delete_orphaned_file(
             detail=f"Error deleting file: {str(e)}"
         )
     
-@router.get("/images/failed/", response_model=list)
+@router.get("/images/failed/", response_model=list, dependencies=[Depends(get_current_active_admin)])
 def get_orphaned_files(db: Session = Depends(get_db),
                      current_user: User = Depends(get_current_active_admin)):
     """
