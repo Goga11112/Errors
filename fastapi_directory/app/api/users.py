@@ -83,7 +83,6 @@ from fastapi import Request
 
 @router.get("/", response_model=list[UserResponse])
 def read_users(request: Request, db: Session = Depends(get_db)):
-    print(f"Request query params: {request.query_params}")
     users = db.query(User).options(joinedload(User.role)).all()
     # Map sadmin and admin to is_super_admin and is_admin for response
     result = []
