@@ -3,7 +3,7 @@ import { AppBar, Toolbar, IconButton, Menu, MenuItem, Typography, Box, Button, u
 import MenuIcon from "@mui/icons-material/Menu";
 import { Link } from "react-router-dom";
 
-function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
+function HeaderMenu({ userRole, onLoginClick, onLogoutClick, isAdmin, isSuperAdmin }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -59,23 +59,36 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                   Авторизация
                 </MenuItem>
               )}
-              {isSuperAdmin && (
+              {hasAdminAccess && (
                 <>
-                  <MenuItem component={Link} to="/users" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
-                    Пользователи
+                  <MenuItem
+                    onClick={() => {
+                      handleMenuClose();
+                      if (onLogoutClick) onLogoutClick();
+                    }}
+                    sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}
+                  >
+                    Выйти
                   </MenuItem>
-                  
-                    <MenuItem component={Link} to="/admin/logs" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
-                      Логи
-                    </MenuItem>
-                    <MenuItem component={Link} to="/admin/orphaned-images" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
-                      Изображения
-                    </MenuItem>
-                </>
-              )}
                   <MenuItem component={Link} to="/admin/errors" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                     Ошибки
                   </MenuItem>
+                  {isSuperAdmin && (
+                    <>
+                      <MenuItem component={Link} to="/users" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
+                        Пользователи
+                      </MenuItem>
+                      
+                        <MenuItem component={Link} to="/admin/logs" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
+                          Логи
+                        </MenuItem>
+                        <MenuItem component={Link} to="/admin/orphaned-images" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
+                          Изображения
+                        </MenuItem>
+                    </>
+                  )}
+                </>
+              )}
             </Menu>
           </>
         ) : (
@@ -87,16 +100,16 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
             )}
             {hasAdminAccess && (
               <>
-              {isSuperAdmin && (
-                <Button
-                  color="inherit"
-                  component={Link}
-                  to="/users"
-                  sx={{ fontWeight: "bold", fontSize: "1rem", color: "#f2a365", "&:hover": { color: "#d18c4a" } }}
-                >
-                  Пользователи
-                </Button>
-              )}
+                {isSuperAdmin && (
+                  <Button
+                    color="inherit"
+                    component={Link}
+                    to="/users"
+                    sx={{ fontWeight: "bold", fontSize: "1rem", color: "#f2a365", "&:hover": { color: "#d18c4a" } }}
+                  >
+                    Пользователи
+                  </Button>
+                )}
                 {isSuperAdmin && (
                   <Button
                     color="inherit"
@@ -125,6 +138,13 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                     Изображения
                   </Button>
                 )}
+                <Button
+                  color="inherit"
+                  onClick={onLogoutClick}
+                  sx={{ fontWeight: "bold", fontSize: "1rem", color: "#f2a365", "&:hover": { color: "#d18c4a" } }}
+                >
+                  Выйти
+                </Button>
               </>
             )}
           </Box>

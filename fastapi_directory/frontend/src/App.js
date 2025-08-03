@@ -75,7 +75,13 @@ function App() {
 
   return (
     <Router>
-      <HeaderMenu userRole={userRole} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} onLoginClick={() => setShowAuth(true)} />
+      <HeaderMenu 
+        userRole={userRole} 
+        isAdmin={isAdmin} 
+        isSuperAdmin={isSuperAdmin} 
+        onLoginClick={() => setShowAuth(true)} 
+        onLogoutClick={handleLogout} 
+      />
       {showAuth ? (
         <AuthPage
           onLoginSuccess={handleLoginSuccess}
@@ -159,26 +165,21 @@ function App() {
         </Routes>
       )}
       {(token || userRole) && (
-        <div>
-          <button onClick={handleLogout} style={{ position: "fixed", top: 10, right: 10 }}>
-            Выйти
-          </button>
-          <footer
-            style={{
-              position: "fixed",
-              bottom: 10,
-              right: 10,
-              backgroundColor: "#f0f0f0",
-              padding: "5px 10px",
-              borderRadius: "5px",
-              boxShadow: "0 0 5px rgba(0,0,0,0.2)",
-              fontSize: "14px",
-              color: "#333"
-            }}
-          >
-            {userName || "Пользователь"}
-          </footer>
-        </div>
+        <footer
+          style={{
+            position: "fixed",
+            bottom: 10,
+            right: 10,
+            backgroundColor: "#f0f0f0",
+            padding: "5px 10px",
+            borderRadius: "5px",
+            boxShadow: "0 0 5px rgba(0,0,0,0.2)",
+            fontSize: "14px",
+            color: "#333"
+          }}
+        >
+          {userName || "Пользователь не авторизирован"}
+        </footer>
       )}
     </Router>
   );
