@@ -93,40 +93,13 @@ function OrphanedImages({ token }) {
     }
   };
 
-  const handleDelete = async (filePath) => {
-  if (!window.confirm('Удалить этот файл?')) return;
-  
-  try {
-    const encodedPath = encodeURIComponent(
-      filePath.replace('/app/uploaded_images/', '')
-    );
-    
-    await axios.delete(`${API_BASE_URL}/errors/images/delete-orphaned/${encodedPath}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    setOrphanedImages(prev => prev.filter(img => img.file_path !== filePath));
-    setSnackbar({
-      open: true,
-      message: 'Файл успешно удален',
-      severity: 'success'
-    });
-  } catch (err) {
-    setSnackbar({
-      open: true,
-      message: `Ошибка удаления: ${err.response?.data?.detail || err.message}`,
-      severity: 'error'
-    });
-  }
-};
-
   const handleDeleteImage = async (filePath) => {
     if (!window.confirm('Удалить этот файл?')) return;
     
     try {
-      const encodedPath = encodeURIComponent(
-        filePath.replace('/uploaded_images/', '')
-      );
+      // Extract the filename from the file_path (remove /uploaded_images/ prefix)
+      const filename = filePath.replace('/uploaded_images/', '');
+      const encodedPath = encodeURIComponent(filename);
       
       await axios.delete(`${API_BASE_URL}/errors/images/delete-orphaned/${encodedPath}`, {
         headers: { Authorization: `Bearer ${token}` }

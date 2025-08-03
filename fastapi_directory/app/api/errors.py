@@ -189,11 +189,20 @@ async def delete_error(
     # Удаляем связанные изображения и файлы
     images = db.query(ErrorImage).filter(ErrorImage.error_id == error_id).all()
     for img in images:
-        filename = os.path.basename(img.image_url)
-        file_path = os.path.join(ABS_UPLOAD_DIR, filename)
+        # image_url is stored as "/uploaded_images/{filename}"
+        # We need to extract just the filename part
+        if img.image_url.startswith("/uploaded_images/"):
+            filename = img.image_url[len("/uploaded_images/"):]
+            file_path = os.path.join(ABS_UPLOAD_DIR, filename)
+        else:
+            # Fallback to the old method if the URL format is different
+            filename = os.path.basename(img.image_url)
+            file_path = os.path.join(ABS_UPLOAD_DIR, filename)
+        
         logging.info(f"Attempting to delete image file: {file_path}")
         logging.info(f"Upload directory: {ABS_UPLOAD_DIR}")
-        logging.info(f"File path components: ABS_UPLOAD_DIR={ABS_UPLOAD_DIR}, filename={filename}")
+        logging.info(f"Image URL: {img.image_url}")
+        logging.info(f"Extracted filename: {filename}")
         try:
             if os.path.exists(file_path):
                 os.remove(file_path)
@@ -262,11 +271,19 @@ def delete_error_image(
     if not db_image:
         raise HTTPException(status_code=404, detail="Image not found")
     # Удаляем файл с диска
-    upload_dir = ABS_UPLOAD_DIR
-    file_path = os.path.join(upload_dir, db_image.image_url.lstrip('/'))
+    # image_url is stored as "/uploaded_images/{filename}"
+    # We need to extract just the filename part
+    if db_image.image_url.startswith("/uploaded_images/"):
+        filename = db_image.image_url[len("/uploaded_images/"):]
+        file_path = os.path.join(ABS_UPLOAD_DIR, filename)
+    else:
+        # Fallback to the old method if the URL format is different
+        file_path = os.path.join(ABS_UPLOAD_DIR, db_image.image_url.lstrip('/'))
+    
     logging.info(f"Attempting to delete image file: {file_path}")
-    logging.info(f"Upload directory: {upload_dir}")
-    logging.info(f"Stripped image URL: {db_image.image_url.lstrip('/')}")
+    logging.info(f"Upload directory: {ABS_UPLOAD_DIR}")
+    logging.info(f"Image URL: {db_image.image_url}")
+    logging.info(f"Extracted filename: {filename if 'filename' in locals() else 'N/A'}")
     logging.info(f"Full file path: {file_path}")
     if os.path.exists(file_path):
         os.remove(file_path)
@@ -343,25 +360,30 @@ async def delete_orphaned_file(
 ):
     """Удаляет бесхозный файл по его пути"""
     try:
-        # Декодируем и проверяем путь
+        # Декодируем путь
         decoded_path = unquote(file_path)
-        upload_dir = PathLib(ABS_UPLOAD_DIR)
-        absolute_path = (upload_dir / decoded_path).resolve()
         
-        # Безопасная проверка пути
-        if not str(absolute_path).startswith(str(upload_dir)):
+        # Путь к файлу в upload директории
+        # file_path приходит как "filename.png" (относительный путь от /uploaded_images/)
+        file_full_path = os.path.join(ABS_UPLOAD_DIR, decoded_path)
+        
+        # Проверяем, что файл находится внутри upload директории (безопасность)
+        file_full_path = os.path.abspath(file_full_path)
+        abs_upload_dir = os.path.abspath(ABS_UPLOAD_DIR)
+        
+        if not file_full_path.startswith(abs_upload_dir):
             raise HTTPException(
                 status_code=403,
                 detail="Cannot delete files outside upload directory"
             )
         
-        if not absolute_path.exists():
+        if not os.path.exists(file_full_path):
             raise HTTPException(
                 status_code=404,
                 detail="File not found"
             )
         
-        absolute_path.unlink()
+        os.remove(file_full_path)
         
         return {"status": "success", "message": "File deleted"}
     
@@ -391,20 +413,25 @@ def get_orphaned_files(db: Session = Depends(get_db),
     for root, _, files in os.walk(upload_dir):
         for filename in files:
             # Создаем относительный путь как в БД
-            rel_path = os.path.join(root, filename)[len(upload_dir):]
-            db_url = f"/uploaded_images{rel_path}"
-            
-            # Проверяем наличие в БД
-            if db_url not in db_urls:
-                full_path = os.path.join(root, filename)
-                stat = os.stat(full_path)
+            full_path = os.path.join(root, filename)
+            try:
+                # Get the relative path from upload_dir to the file
+                rel_path = os.path.relpath(full_path, upload_dir).replace("\\", "/")
+                db_url = f"/uploaded_images/{rel_path}"
                 
-                orphaned_files.append({
-                    "file_path": db_url,
-                    "absolute_path": full_path,
-                    "size": stat.st_size,
-                    "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                    "status": "not_referenced_in_db"
-                })
+                # Проверяем наличие в БД
+                if db_url not in db_urls:
+                    stat = os.stat(full_path)
+                    
+                    orphaned_files.append({
+                        "file_path": db_url,
+                        "absolute_path": full_path,
+                        "size": stat.st_size,
+                        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                        "status": "not_referenced_in_db"
+                    })
+            except Exception as e:
+                logging.error(f"Error processing file {full_path}: {e}")
+                continue
     
     return orphaned_files
