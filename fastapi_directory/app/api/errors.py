@@ -1,7 +1,13 @@
+from datetime import datetime  # Добавьте этот импорт в начале файла
+from urllib.parse import unquote
+from typing import List  # Для аннотации типов
+from pathlib import Path as PathLib  # Для работы с путями
+from datetime import datetime  # Для работы с датами
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 import os
 import shutil
@@ -273,72 +279,132 @@ def delete_error_image(
     #log_admin_action(db, request=db_image, action=f"Удалена ошибка: {db_image.image_url}") 
     return None
 
-@router.get("/images/orphaned/", response_model=list[ErrorImageResponse])
-def get_orphaned_images(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_admin)):
-    """
-    Get all images that are not linked to any error (orphaned images)
-    """
-    # Get all image IDs that are linked to errors
-    linked_image_ids = db.query(ErrorImage.id).join(Error).all()
-    linked_image_ids = [img_id[0] for img_id in linked_image_ids]
-    
-    # Get all images that are not in the linked list
-    if linked_image_ids:
-        orphaned_images = db.query(ErrorImage).filter(~ErrorImage.id.in_(linked_image_ids)).all()
-    else:
-        # If no images are linked, all images are orphaned
-        orphaned_images = db.query(ErrorImage).all()
-    
-    return orphaned_images
-
-@router.get("/images/failed/", response_model=list)
-def get_errors_with_failed_images(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_admin)):
-    """
-    Get all errors that have images that failed to load (images that are referenced in DB but don't exist in filesystem)
-    """
-    # Get all errors with their images
-    errors_with_images = db.query(Error).join(ErrorImage).all()
-    
-    # Check which images fail to load
-    failed_errors = []
-    for error in errors_with_images:
-        failed_images = []
-        for image in error.images:
-            # Check if image file exists
-            # Use the same upload directory as defined globally
-            upload_dir = ABS_UPLOAD_DIR
-            # Construct file path by removing the /uploaded_images/ prefix from image_url
-            if image.image_url.startswith("/uploaded_images/"):
-                filename = image.image_url[len("/uploaded_images/"):]
-            else:
-                # Fallback to old method if URL doesn't start with /uploaded_images/
-                filename = image.image_url.lstrip('/')
-            file_path = os.path.join(upload_dir, filename)
-            
-            # Log for debugging
-            logging.info(f"Checking image: {image.image_url}")
-            logging.info(f"Upload directory: {upload_dir}")
-            logging.info(f"Filename: {filename}")
-            logging.info(f"Full file path: {file_path}")
-            logging.info(f"File exists: {os.path.exists(file_path)}")
-            logging.info(f"Upload directory exists: {os.path.exists(upload_dir)}")
-            logging.info(f"Upload directory writable: {os.access(upload_dir, os.W_OK)}")
-            
-            if not os.path.exists(file_path):
-                failed_images.append({
-                    "id": image.id,
-                    "image_url": image.image_url
-                })
+@router.get("/images/orphaned/", response_model=List[dict])
+def get_orphaned_images(db: Session = Depends(get_db)):
+    """Получает список бесхозных изображений"""
+    try:
+        # Получаем все URL изображений из базы данных используя ORM
+        db_images = db.query(ErrorImage.image_url).all()
+        db_urls = {img.image_url for img in db_images}
+        logging.info(f"Found {len(db_urls)} images in database")
         
-        if failed_images:
-            failed_errors.append({
-                "error": {
-                    "id": error.id,
-                    "name": error.name,
-                    "description": error.description,
-                    "solution_description": error.solution_description
-                },
-                "failed_images": failed_images
-            })
+        # Проверяем существование директории загрузки
+        upload_dir = PathLib(ABS_UPLOAD_DIR)
+        logging.info(f"Upload directory: {upload_dir}")
+        logging.info(f"Upload directory exists: {upload_dir.exists()}")
+        
+        if not upload_dir.exists():
+            raise HTTPException(
+                status_code=500,
+                detail="Upload directory does not exist"
+            )
+        
+        orphaned_files = []
+        
+        # Сканируем все файлы в директории загрузки
+        for file_path in upload_dir.rglob('*'):
+            if file_path.is_file():
+                try:
+                    # Создаем URL как в БД
+                    rel_path = str(file_path.relative_to(upload_dir)).replace("\\", "/")
+                    db_url = f"/uploaded_images/{rel_path}"
+                    logging.info(f"Processing file: {file_path}, URL: {db_url}")
+                    
+                    # Проверяем, есть ли этот файл в БД
+                    if db_url not in db_urls:
+                        stat = file_path.stat()
+                        orphaned_files.append({
+                            "file_path": db_url,
+                            "absolute_path": str(file_path),
+                            "size": stat.st_size,
+                            "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                            "filename": file_path.name,
+                            "id": str(file_path)  # Добавляем ID для фронтенда
+                        })
+                except Exception as e:
+                    logging.error(f"Error processing file {file_path}: {e}")
+                    continue
+        
+        logging.info(f"Found {len(orphaned_files)} orphaned files")
+        return orphaned_files
     
-    return failed_errors
+    except Exception as e:
+        logging.error(f"Error in get_orphaned_images: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error scanning files: {str(e)}"
+        )
+    
+    
+@router.delete("/images/delete-orphaned/{file_path:path}")
+async def delete_orphaned_file(
+    file_path: str,
+    db: Session = Depends(get_db)
+):
+    """Удаляет бесхозный файл по его пути"""
+    try:
+        # Декодируем и проверяем путь
+        decoded_path = unquote(file_path)
+        upload_dir = PathLib(ABS_UPLOAD_DIR)
+        absolute_path = (upload_dir / decoded_path).resolve()
+        
+        # Безопасная проверка пути
+        if not str(absolute_path).startswith(str(upload_dir)):
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot delete files outside upload directory"
+            )
+        
+        if not absolute_path.exists():
+            raise HTTPException(
+                status_code=404,
+                detail="File not found"
+            )
+        
+        absolute_path.unlink()
+        
+        return {"status": "success", "message": "File deleted"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error deleting file: {str(e)}"
+        )
+    
+@router.get("/images/failed/", response_model=list)
+def get_orphaned_files(db: Session = Depends(get_db),
+                     current_user: User = Depends(get_current_active_admin)):
+    """
+    Get all files in upload directory that don't exist in error_images table
+    Returns: List of {file_path: str, size: int, modified: str}
+    """
+    # 1. Get all image URLs from database
+    db_images = db.query(ErrorImage.image_url).all()
+    db_urls = {img.image_url for img in db_images}  # Используем set для быстрого поиска
+    
+    # 2. Scan upload directory
+    upload_dir = ABS_UPLOAD_DIR
+    orphaned_files = []
+    
+    for root, _, files in os.walk(upload_dir):
+        for filename in files:
+            # Создаем относительный путь как в БД
+            rel_path = os.path.join(root, filename)[len(upload_dir):]
+            db_url = f"/uploaded_images{rel_path}"
+            
+            # Проверяем наличие в БД
+            if db_url not in db_urls:
+                full_path = os.path.join(root, filename)
+                stat = os.stat(full_path)
+                
+                orphaned_files.append({
+                    "file_path": db_url,
+                    "absolute_path": full_path,
+                    "size": stat.st_size,
+                    "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    "status": "not_referenced_in_db"
+                })
+    
+    return orphaned_files
