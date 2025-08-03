@@ -64,15 +64,10 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                   <MenuItem component={Link} to="/users" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                     Пользователи
                   </MenuItem>
-                  {isSuperAdmin && (
+                  
                     <MenuItem component={Link} to="/admin/logs" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                       Логи
                     </MenuItem>
-                  )}
-                  
-                  <MenuItem component={Link} to="/admin/contactinfo" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
-                    Контакты
-                  </MenuItem>
                     <MenuItem component={Link} to="/admin/orphaned-images" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                       Изображения
                     </MenuItem>
@@ -120,16 +115,6 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                 >
                   Ошибки
                 </Button>
-                {isSuperAdmin && (
-                <Button
-                  color="inherit"
-                  component={Link}
-                  to="/admin/contactinfo"
-                  sx={{ fontWeight: "bold", fontSize: "1rem", color: "#f2a365", "&:hover": { color: "#d18c4a" } }}
-                >
-                  Контакты
-                </Button>
-                )}
                 {isSuperAdmin && (
                   <Button
                     color="inherit"

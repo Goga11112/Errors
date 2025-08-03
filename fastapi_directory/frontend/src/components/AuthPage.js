@@ -2,50 +2,35 @@ import React, { useState } from "react";
 import axios from "axios";
 
 function AuthPage({ onLoginSuccess, onContinueAsGuest }) {
-  const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
-
-  const toggleMode = () => {
-    setError(null);
-    setIsLogin(!isLogin);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     try {
-      if (isLogin) {
-        // Login request
-        const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL || '/api'}/auth/token`, new URLSearchParams({
-          username,
-          password,
-        }), {
+      // Login request
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_BASE_URL || '/api'}/auth/token`, 
+        new URLSearchParams({ username, password }), 
+        {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-        });
-        const token = response.data.access_token;
-        localStorage.setItem("access_token", token);
-        onLoginSuccess(token);
-      } else {
-        // Registration request
-        await axios.post(`${process.env.REACT_APP_API_BASE_URL || '/api'}/auth/register`, {
-          username,
-          password,
-        });
-        setIsLogin(true);
-        setError("Регистрация успешна. Пожалуйста, войдите.");
-      }
+        }
+      );
+      const token = response.data.access_token;
+      localStorage.setItem("access_token", token);
+      onLoginSuccess(token);
     } catch (err) {
-      setError(err.response?.data?.detail || "Ошибка при запросе");
+      setError(err.response?.data?.detail || "Ошибка при входе");
     }
   };
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>{isLogin ? "Вход" : "Регистрация"}</h2>
+      <h2 style={styles.title}>Вход</h2>
       <form onSubmit={handleSubmit} style={styles.form}>
         <input
           id="username"
@@ -65,14 +50,11 @@ function AuthPage({ onLoginSuccess, onContinueAsGuest }) {
           onChange={(e) => setPassword(e.target.value)}
           required
           style={styles.input}
-          autoComplete={isLogin ? "current-password" : "new-password"}
+          autoComplete="current-password"
         />
-      <button type="submit" style={styles.button}>
-        {isLogin ? "Войти" : "Зарегистрироваться"}
-      </button>
-      <button onClick={toggleMode} style={styles.registrationButton}>
-        {isLogin ? "Регистрация" : "Уже есть аккаунт? Войти"}
-      </button>
+        <button type="submit" style={styles.button}>
+          Войти
+        </button>
       </form>
       {error && <div style={styles.error}>{error}</div>}
       <button onClick={onContinueAsGuest} style={styles.guestButton}>
@@ -90,15 +72,15 @@ const styles = {
     borderRadius: 10,
     textAlign: "center",
     fontFamily: "Arial, sans-serif",
-    backgroundColor: "#2a2f4a", // dark blue background (triad color 1)
-    border: "1px solid #f2a365", // orange border (triad color 2)
-    boxShadow: "0 4px 12px rgba(242, 163, 101, 0.4)", // orange shadow
+    backgroundColor: "#2a2f4a",
+    border: "1px solid #f2a365",
+    boxShadow: "0 4px 12px rgba(242, 163, 101, 0.4)",
   },
   title: {
     marginBottom: 20,
     fontWeight: "bold",
     fontSize: 24,
-    color: "#f2a365", // orange (triad color 2)
+    color: "#f2a365",
   },
   form: {
     display: "flex",
@@ -110,16 +92,12 @@ const styles = {
     padding: 14,
     fontSize: 18,
     borderRadius: 8,
-    border: "1px solid #84a59d", // greenish border (triad color 3)
+    border: "1px solid #84a59d",
     outline: "none",
     transition: "border-color 0.3s, box-shadow 0.3s",
-    backgroundColor: "#1b1f33", // darker blue background for inputs
-    color: "#eaeaea", // light text
+    backgroundColor: "#1b1f33",
+    color: "#eaeaea",
     boxShadow: "inset 0 0 5px rgba(132, 165, 157, 0.5)",
-  },
-  inputFocus: {
-    borderColor: "#f2a365",
-    boxShadow: "0 0 8px #f2a365",
   },
   button: {
     padding: 14,
@@ -127,32 +105,11 @@ const styles = {
     cursor: "pointer",
     borderRadius: 8,
     border: "none",
-    backgroundColor: "#f2a365", // orange button
-    color: "#2a2f4a", // dark blue text
+    backgroundColor: "#f2a365",
+    color: "#2a2f4a",
     fontWeight: "700",
     transition: "background-color 0.3s, box-shadow 0.3s",
     boxShadow: "0 4px 8px rgba(242, 163, 101, 0.6)",
-  },
-  buttonHover: {
-    backgroundColor: "#d18c4a",
-    boxShadow: "0 6px 12px rgba(209, 140, 74, 0.8)",
-  },
-  registrationButton: {
-    marginTop: 20,
-    padding: 14,
-    fontSize: 18,
-    cursor: "pointer",
-    borderRadius: 8,
-    border: "1px solid #f2a365", // orange border
-    backgroundColor: "#2a2f4a", // dark blue background
-    color: "#f2a365", // orange text
-    fontWeight: "700",
-    transition: "background-color 0.3s, box-shadow 0.3s",
-    boxShadow: "0 4px 8px rgba(242, 163, 101, 0.6)",
-  },
-  registrationButtonHover: {
-    backgroundColor: "#3b4160",
-    boxShadow: "0 6px 12px rgba(242, 163, 101, 0.8)",
   },
   guestButton: {
     marginTop: 20,
@@ -160,33 +117,18 @@ const styles = {
     fontSize: 18,
     cursor: "pointer",
     borderRadius: 8,
-    border: "1px solid #f2a365", // orange border
-    backgroundColor: "#2a2f4a", // dark blue background
-    color: "#f2a365", // orange text
+    border: "1px solid #f2a365",
+    backgroundColor: "#2a2f4a",
+    color: "#f2a365",
     fontWeight: "700",
     transition: "background-color 0.3s, box-shadow 0.3s",
     boxShadow: "0 4px 8px rgba(242, 163, 101, 0.6)",
   },
-  guestButtonHover: {
-    backgroundColor: "#3b4160",
-    boxShadow: "0 6px 12px rgba(242, 163, 101, 0.8)",
-  },
   error: {
     marginTop: 10,
-    color: "#ff6b6b", // softer red
+    color: "#ff6b6b",
     fontWeight: "700",
   },
-  "@keyframes gradientShift": {
-    "0%": {
-      backgroundPosition: "0% 50%",
-    },
-    "50%": {
-      backgroundPosition: "100% 50%",
-    },
-    "100%": {
-      backgroundPosition: "0% 50%",
-    },
-  }
 };
 
 export default AuthPage;
