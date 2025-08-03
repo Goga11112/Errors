@@ -1,14 +1,72 @@
 import sys
 import os
+from time import sleep
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 
-# Add the parent directory of fastapi_directory to sys.path to allow imports of 'app'
+# Добавляем путь для импортов (ваш текущий код)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
-from app.db.database import SessionLocal
+from app.db.database import SessionLocal, engine
 from app.models.user import User
 from app.models.role import Role
 from app.models.error import Error
 from app.core.security import get_password_hash
+
+def create_errors_server():
+    """Создает сервер Errors_server, если его нет."""
+    max_retries = 5
+    retry_delay = 3
+
+    host = os.getenv("POSTGRES_HOST")
+    dbname = os.getenv("POSTGRES_DB")
+    user = os.getenv("POSTGRES_USER")
+    password = os.getenv("POSTGRES_PASSWORD")
+
+    for attempt in range(max_retries):
+        try:
+            with engine.connect() as conn:
+                # Проверяем наличие расширения
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgres_fdw;"))
+                conn.commit()
+                
+                # Проверяем существование сервера
+                result = conn.execute(
+                    text("SELECT 1 FROM pg_foreign_server WHERE srvname = 'errors_server';")
+                ).scalar()
+                
+                if not result:
+                    conn.execute(text("""
+                        CREATE SERVER errors_server 
+                        FOREIGN DATA WRAPPER postgres_fdw 
+                        OPTIONS (host :host, dbname :dbname, port '5432');
+                    """), {'host': host, 'dbname': dbname})
+                    
+                    conn.execute(text("""
+                        CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER
+                        SERVER errors_server 
+                        OPTIONS (user :user, password :password);
+                    """), {'user': user, 'password': password})
+                    
+                    conn.commit()
+                    print("✅ Сервер 'errors_server' создан")
+                else:
+                    print("✅ Сервер 'errors_server' уже существует")
+                return True
+
+        except OperationalError as e:
+            print(f"⚠️ Попытка {attempt + 1}/{max_retries}: Ошибка подключения к БД — {e}")
+            if attempt < max_retries - 1:
+                sleep(retry_delay)
+    
+    print("❌ Не удалось создать сервер 'errors_server'")
+    return False
+
+def create_tables():
+    """Создаёт все таблицы через SQLAlchemy"""
+    from app.db.database import Base
+    Base.metadata.create_all(bind=engine)
+    print("✅ Таблицы созданы")
 
 def init_db():
     db = SessionLocal()
@@ -64,5 +122,10 @@ def init_db():
     finally:
         db.close()
 
+
 if __name__ == "__main__":
-    init_db()
+    if create_errors_server():  # Сначала создаем сервер
+        create_tables()
+        init_db()              # Затем заполняем БД
+    else:
+        sys.exit(1)  # Завершаем с ошибкой, если сервер не создан

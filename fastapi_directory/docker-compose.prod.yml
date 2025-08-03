@@ -11,10 +11,14 @@ services:
     volumes:
       - ./app:/app
       - uploaded_images:/app/uploaded_images
-    environment:
-      - UPLOAD_DIR=/app/uploaded_images
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/db_errors
-      - SECRET_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTc0NTIxOTUyNX0.-sjuDM9hG-3-c46EGUe2g0UDRWDIBnoAYZdBE5Ohdeg
+    environment:  # ← Используем либо словарь, либо список (но не смешиваем!)
+      UPLOAD_DIR: /app/uploaded_images
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/db_errors
+      SECRET_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTc0NTIxOTUyNX0.-sjuDM9hG-3-c46EGUe2g0UDRWDIBnoAYZdBE5Ohdeg
+      POSTGRES_HOST: db
+      POSTGRES_DB: db_errors
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     env_file:
       - ./app/.env.production
     depends_on: 
@@ -53,7 +57,7 @@ services:
       POSTGRES_DB: db_errors
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./app/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./app/db/init.sql:/docker-entrypoint-initdb.d/init.sql  # Этот файл будет выполнен при старте
     ports:
       - "5432:5432"
 
