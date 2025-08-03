@@ -17,6 +17,7 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
   };
 
   const hasAdminAccess = isAdmin || isSuperAdmin;
+  const hasSuperAdminAccess = isSuperAdmin;
 
   return (
     <AppBar position="static" sx={{ backgroundColor: "#2a2f4a", boxShadow: "0 2px 6px rgba(0,0,0,0.3)" }}>
@@ -58,7 +59,7 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                   Авторизация
                 </MenuItem>
               )}
-              {hasAdminAccess && (
+              {isSuperAdmin && (
                 <>
                   <MenuItem component={Link} to="/users" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                     Пользователи
@@ -68,19 +69,18 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                       Логи
                     </MenuItem>
                   )}
-                  <MenuItem component={Link} to="/admin/errors" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
-                    Ошибки
-                  </MenuItem>
+                  
                   <MenuItem component={Link} to="/admin/contactinfo" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                     Контакты
                   </MenuItem>
-                  {isSuperAdmin && (
                     <MenuItem component={Link} to="/admin/orphaned-images" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
                       Изображения
                     </MenuItem>
-                  )}
                 </>
               )}
+                  <MenuItem component={Link} to="/admin/errors" onClick={handleMenuClose} sx={{ color: "#f2a365", "&:hover": { backgroundColor: "#34495e" } }}>
+                    Ошибки
+                  </MenuItem>
             </Menu>
           </>
         ) : (
@@ -92,6 +92,7 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
             )}
             {hasAdminAccess && (
               <>
+              {isSuperAdmin && (
                 <Button
                   color="inherit"
                   component={Link}
@@ -100,6 +101,7 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                 >
                   Пользователи
                 </Button>
+              )}
                 {isSuperAdmin && (
                   <Button
                     color="inherit"
@@ -118,6 +120,7 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                 >
                   Ошибки
                 </Button>
+                {isSuperAdmin && (
                 <Button
                   color="inherit"
                   component={Link}
@@ -126,6 +129,7 @@ function HeaderMenu({ userRole, onLoginClick, isAdmin, isSuperAdmin }) {
                 >
                   Контакты
                 </Button>
+                )}
                 {isSuperAdmin && (
                   <Button
                     color="inherit"

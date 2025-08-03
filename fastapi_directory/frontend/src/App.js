@@ -103,7 +103,7 @@ function App() {
           <Route 
             path="/users" 
             element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole="super_admin">
                 <Users token={token} />
               </ProtectedRoute>
             } 
@@ -111,7 +111,7 @@ function App() {
           <Route 
             path="/admin" 
             element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole="super_admin">
                 <AdminPanelErrors token={token} />
               </ProtectedRoute>
             } 
@@ -119,7 +119,7 @@ function App() {
           <Route 
             path="/admin/contactinfo" 
             element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole="super_admin">
                 <AdminPanelContactInfo token={token} />
               </ProtectedRoute>
             } 

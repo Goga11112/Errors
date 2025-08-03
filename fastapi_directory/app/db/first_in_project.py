@@ -86,9 +86,9 @@ def init_db():
 
         # Add users
         users_data = [
-            {"username": "Goga", "realname": "Главный администратор", "password": "191202", "role_name": "Администратор"},
-            {"username": "Ivan", "realname": "Авторизованный пользователь Иван", "password": "password1", "role_name": "Авторизованный пользователь"},
-            {"username": "Guest", "realname": "Гость", "password": "guestpass", "role_name": "Гость"}
+            {"username": "Goga", "realname": "Егор Гаврилов", "password": "191202", "role_name": "Администратор","sadmin": True,"admin": True},
+            {"username": "Ivan", "realname": "Иван Иванович", "password": "123", "role_name": "Авторизованный пользователь","sadmin": False,"admin": True},
+            {"username": "Guest", "realname": "Гость", "password": "guestpass", "role_name": "Гость","sadmin": False,"admin": False}
         ]
         for user_data in users_data:
             existing_user = db.query(User).filter(User.username == user_data["username"]).first()
@@ -98,7 +98,9 @@ def init_db():
                     username=user_data["username"],
                     realname=user_data["realname"],
                     password_hash=get_password_hash(user_data["password"]),
-                    role=role
+                    role=role,
+                    sadmin=user_data.get("sadmin", False),  # Используем .get() с значением по умолчанию
+                    admin=user_data.get("admin", False)     
                 )
                 db.add(user)
         db.commit()
