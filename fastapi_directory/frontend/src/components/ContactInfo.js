@@ -4,18 +4,23 @@ import { Typography, List, ListItem, ListItemText, Box } from "@mui/material";
 const contacts = [
   {
     department: "Служба поддержки",
-    phone: "+7 (495) 123-45-67",
+    phone: "3333",
     description: "Помощь с техническими вопросами и консультации",
   },
   {
-    department: "Отдел продаж",
-    phone: "+7 (495) 234-56-78",
-    description: "Вопросы по заказам и коммерческим предложениям",
+    department: "Гладышев Александр Викторович",
+    phone: "1790",
+    description: "Вопросы по работе приложения и видения заявок",
   },
   {
-    department: "Техническая поддержка Siebel",
-    phone: "+7 (495) 345-67-89",
-    description: "Решение технических проблем и сопровождение",
+    department: "Гаврилов Егор Витальевич",
+    phone: "2377",
+    description: "Техническая поддержка",
+  },
+  {
+    department: "Мищенко Даниил Витальевич",
+    phone: "2268",
+    description: "Техническая поддержка",
   },
 ];
 

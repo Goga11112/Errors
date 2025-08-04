@@ -18,14 +18,12 @@ RUN apt-get update && apt-get install -y \
 # Set work directory
 WORKDIR /app
 
-# Copy dependencies and wait-for-db script
+# Copy dependencies
 COPY requirements.txt /app/requirements.txt
-COPY wait-for-db.sh /app/wait-for-db.sh
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    chmod +x /app/wait-for-db.sh
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy project
 COPY . /app
