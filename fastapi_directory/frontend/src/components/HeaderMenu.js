@@ -20,23 +20,30 @@ function HeaderMenu({ userRole, onLoginClick, onLogoutClick, isAdmin, isSuperAdm
   const hasSuperAdminAccess = isSuperAdmin;
 
   return (
-    <AppBar position="static" sx={{ backgroundColor: "#2a2f4a", boxShadow: "0 2px 6px rgba(0,0,0,0.3)" }}>
-      <Toolbar sx={{ maxWidth: 1200, margin: "0 auto", width: "100%" }}>
-        <Typography
-          variant="h5"
-          component={Link}
-          to="/"
-          sx={{
-            flexGrow: 1,
-            fontWeight: "bold",
-            color: "#f2a365",
-            textDecoration: "none",
-            letterSpacing: 1,
-            "&:hover": { color: "#d18c4a" },
-          }}
-        >
-          Список ошибок
-        </Typography>
+<AppBar position="static" sx={{ backgroundColor: "#2a2f4a", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", zIndex: 1300, position: "relative" }}>
+  <Toolbar sx={{ maxWidth: 1200, margin: "0 auto", width: "100%", display: "flex", alignItems: "center" }}>
+    <Box
+      component="img"
+      src="/Siebel-CRM-logo.png"
+      alt="Siebel CRM Logo"
+      sx={{ height: 40, marginRight: 2, cursor: "pointer" }}
+      onClick={() => window.location.href = "/"}
+    />
+    <Typography
+      variant="h5"
+      component={Link}
+      to="/"
+      sx={{
+        flexGrow: 1,
+        fontWeight: "bold",
+        color: "#f2a365",
+        textDecoration: "none",
+        letterSpacing: 1,
+        "&:hover": { color: "#d18c4a" },
+      }}
+    >
+      Список ошибок
+    </Typography>
         {isMobile ? (
           <>
             <IconButton color="inherit" onClick={handleMenuOpen} aria-label="menu" sx={{ color: "#f2a365" }}>
